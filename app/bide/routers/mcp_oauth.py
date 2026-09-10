@@ -32,7 +32,8 @@ SCOPE = "mcp:read"
 ACCESS_TTL = 3600
 GRANT_TTL = 30 * 86400
 NO_STORE = {"Cache-Control": "no-store", "Pragma": "no-cache"}
-PAGE_HEADERS = {**NO_STORE, "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY",
+# Preserve same-origin form Origin; prevent CDN email rewriting under strict CSP.
+PAGE_HEADERS = {**NO_STORE, "Cache-Control": "no-store, no-transform", "Referrer-Policy": "same-origin", "X-Frame-Options": "DENY",
                 "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"}
 
 

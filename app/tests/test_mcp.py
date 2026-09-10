@@ -198,10 +198,13 @@ def test_consent_csrf_denial_and_replay(client):
     reg = register(client, client_name='<script>alert(1)</script>')
     r = get_consent(client, reg)
     assert '<script>' not in r.text and '&lt;script&gt;' in r.text
+    assert r.headers['referrer-policy'] == 'same-origin'
+    assert 'no-transform' in r.headers['cache-control']
     data = inputs(r)
+    assert client.post("/oauth/consent", data={**data, "decision":"allow"}, headers={"origin":"null"}).status_code == 403
     assert client.post("/oauth/consent", data={**data, "csrf":"bad", "decision":"allow"}).status_code == 403
     assert client.post("/oauth/consent", data={**data, "decision":"allow"}, headers={"origin":"https://evil.test"}).status_code == 403
-    r = client.post("/oauth/consent", data={**data, "decision":"deny"}, follow_redirects=False)
+    r = client.post("/oauth/consent", data={**data, "decision":"deny"}, headers={"origin":ISSUER}, follow_redirects=False)
     assert parse_qs(urlsplit(r.headers["location"]).query)["error"] == ["access_denied"]
     assert client.post("/oauth/consent", data={**data, "decision":"allow"}).status_code == 400
 
