@@ -683,3 +683,15 @@ def test_browser_logout_revokes_linked_mcp(client):
     r = client.post("/auth/logout", data=inputs(response), follow_redirects=False)
     assert r.status_code == 303
     assert rpc(client, "ping", token=result["access_token"]).status_code == 401
+
+
+def test_consent_csp_allows_only_registered_callback_origin(client):
+    reg = register(client)
+    response = get_consent(client, reg)
+    target = urlsplit(reg['redirect_uris'][0])
+    expected = target.scheme + '://' + target.netloc
+    assert "form-action 'self' " + expected + ";" in response.headers['content-security-policy']
+    assert "form-action 'self';" in client.get('/oauth/connections').headers['content-security-policy']
+    hostile = O.page('test', '', 'https://bad.test;script-src/return')
+    assert 'bad.test%3Bscript-src' in hostile.headers['content-security-policy']
+    assert ';script-src' not in hostile.headers['content-security-policy']

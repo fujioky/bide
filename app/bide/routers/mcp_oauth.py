@@ -14,7 +14,7 @@ import json
 import re
 import secrets
 import time
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit, unquote
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit, unquote, quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -174,9 +174,17 @@ def check_csrf(request, key, uid, value):
         fail("invalid_request", "Invalid origin", 403)
 
 
-def page(title: str, body: str):
+def page(title: str, body: str, redirect_uri: str | None = None):
+    headers = dict(PAGE_HEADERS)
+    if redirect_uri:
+        # Browsers apply form-action to the post-consent redirect as well.
+        # Escape CSP delimiters even though the callback was validated at registration.
+        target = urlsplit(redirect_uri)
+        destination = target.scheme + "://" + quote(target.netloc, safe="[]:.-")
+        headers["Content-Security-Policy"] = headers["Content-Security-Policy"].replace(
+            "form-action 'self';", "form-action 'self' " + destination + ";")
     return HTMLResponse('''<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>''' + html.escape(title) + ''' · BIDE</title><style>body{font:17px/1.7 system-ui;background:#f5f5f3;color:#202623;margin:0;padding:40px 20px}main{max-width:620px;margin:5vh auto;background:white;padding:32px;border-radius:16px}h1{font-size:26px}button{font:inherit;padding:9px 22px;border:1px solid #b7c3ba;border-radius:8px;background:#163f2e;color:white;cursor:pointer;margin:8px 8px 0 0}a{color:#24553f}.muted{color:#626b65;overflow-wrap:anywhere}article{border-top:1px solid #ddd;padding:18px 0}input{display:none}</style><main><a href="/dashboard">BIDE</a><h1>''' + html.escape(title) + "</h1>" + body + "</main></html>", headers=PAGE_HEADERS)
+<title>''' + html.escape(title) + ''' · BIDE</title><style>body{font:17px/1.7 system-ui;background:#f5f5f3;color:#202623;margin:0;padding:40px 20px}main{max-width:620px;margin:5vh auto;background:white;padding:32px;border-radius:16px}h1{font-size:26px}button{font:inherit;padding:9px 22px;border:1px solid #b7c3ba;border-radius:8px;background:#163f2e;color:white;cursor:pointer;margin:8px 8px 0 0}a{color:#24553f}.muted{color:#626b65;overflow-wrap:anywhere}article{border-top:1px solid #ddd;padding:18px 0}input{display:none}</style><main><a href="/dashboard">BIDE</a><h1>''' + html.escape(title) + "</h1>" + body + "</main></html>", headers=headers)
 
 
 @router.get("/oauth/authorize")
@@ -229,7 +237,7 @@ def consent(request: Request, request_id: str, db: Session = Depends(get_db), us
         body += '<p>允许客户端在你离线时继续读取，最长 30 天；你可以随时撤销。</p>'
     body += f'<p class="muted">客户端名称由对方提供，请确认回调地址：<br>{esc(p["redirect_uri"])}</p>'
     body += f'<form method="post" action="/oauth/consent"><input type="hidden" name="request_id" value="{esc(req.id)}"><input type="hidden" name="csrf" value="{csrf(request, req.id, user.id)}"><button name="decision" value="allow">允许访问</button><button name="decision" value="deny">取消</button></form><p><a href="/oauth/connections">管理已授权应用</a></p>'
-    return page("授权应用", body)
+    return page("授权应用", body, p["redirect_uri"])
 
 
 def new_credential(db, grant_id, kind, ttl, **kwargs):
