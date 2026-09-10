@@ -520,7 +520,7 @@ input::placeholder{color:var(--text-muted)}
   </main>
 </div>
 
-<footer class="dfoot"><span>© 2026 Lyra · example.org</span><span class="r"><a href="/rss.xml">RSS</a><a href="#" id="totop">回顶部</a></span></footer>
+
 </div>
 <script src="/static/zones.js"></script>
 <script src="/static/tickerchart.js"></script>
@@ -660,9 +660,7 @@ input::placeholder{color:var(--text-muted)}
       document.addEventListener('pointerup', up);
     });
   })();
-  $('totop').addEventListener('click', function (e) {
-    e.preventDefault(); $('main').scrollTo({ top: 0, behavior: 'smooth' });
-  });
+
 
   /* ══ 取数 ══ 与原来一致：串行、按代码去重、localStorage 缓存 6 小时 ══ */
   function save() {
