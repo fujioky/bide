@@ -29,6 +29,7 @@ class Settings:
     oidc_client_id: str = _env("OIDC_CLIENT_ID", "")
     oidc_client_secret: str = _env("OIDC_CLIENT_SECRET", "")
     oidc_scopes: str = _env("OIDC_SCOPES", "openid profile email offline_access")
+    account_portal_url: str = _env("ACCOUNT_PORTAL_URL", "").rstrip("/")
     oidc_account_center: str = _env("OIDC_ACCOUNT_CENTER", "")
     admin_emails: frozenset = field(default_factory=lambda: frozenset(e.lower() for e in _list("ADMIN_EMAILS")))
     dev_login: bool = _env("DEV_LOGIN", "") == "1"

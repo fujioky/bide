@@ -26,3 +26,8 @@ quant.bide.example.com {
 	import common
 	reverse_proxy quant:8080
 }
+
+account.example.com {
+	import common
+	reverse_proxy account:8080
+}

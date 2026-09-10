@@ -32,6 +32,13 @@ services:
     depends_on: [quant, agent]
     <<: *common
 
+  account:
+    build: ../packages/fujioky-auth
+    env_file: ../secrets/env/account.env
+    volumes: ["/srv/account:/data"]
+    mem_limit: 256m
+    <<: *common
+
   quant:
     build: ../quant
     env_file: ../secrets/env/quant.env

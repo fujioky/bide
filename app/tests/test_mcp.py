@@ -695,3 +695,26 @@ def test_consent_csp_allows_only_registered_callback_origin(client):
     hostile = O.page('test', '', 'https://bad.test;script-src/return')
     assert 'bad.test%3Bscript-src' in hostile.headers['content-security-policy']
     assert ';script-src' not in hostile.headers['content-security-policy']
+
+
+def test_account_api_only_exposes_token_owner(client, monkeypatch):
+    from bide.auth import manager
+    from fujioky_auth.provider import InvalidToken
+    make_token()
+    login(client, 'other@example.com')
+    make_token('other@example.com')
+    async def userinfo(token):
+        if token != 'owner-token': raise InvalidToken()
+        return {'sub': 'dev:admin@example.com'}
+    monkeypatch.setattr(manager.provider, 'userinfo', userinfo)
+    assert client.get('/api/account/connections').status_code == 401
+    headers={'Authorization':'Bearer owner-token'}
+    rows=client.get('/api/account/connections',headers=headers).json()['grants']
+    assert len(rows)==1
+    with SessionLocal() as db:
+        other=db.scalar(select(User).where(User.email=='other@example.com'))
+        foreign=db.scalar(select(OAuthGrant).where(OAuthGrant.user_id==other.id)).id
+    assert client.delete('/api/account/connections/'+foreign,headers=headers).status_code==200
+    with SessionLocal() as db: assert not db.get(OAuthGrant,foreign).revoked
+    assert client.delete('/api/account/connections/'+rows[0]['id'],headers=headers).status_code==200
+    assert client.get('/api/account/connections',headers=headers).json()['grants']==[]

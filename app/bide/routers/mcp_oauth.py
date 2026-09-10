@@ -379,3 +379,42 @@ async def disconnect(request: Request, db: Session = Depends(get_db), user: User
     db.execute(update(OAuthGrant).where(OAuthGrant.id == key, OAuthGrant.user_id == user.id).values(revoked=True))
     db.commit()
     return RedirectResponse("/oauth/connections", status_code=303, headers=NO_STORE)
+
+
+async def account_api_user(request: Request, db: Session = Depends(get_db)):
+    """Resolve the caller from a Logto token; never accept a user ID from input."""
+    from ..auth import manager
+    from fujioky_auth.provider import InvalidToken, ProviderUnavailable
+    value = request.headers.get('authorization', '')
+    if not value.startswith('Bearer ') or not 1 <= len(value[7:]) <= 8192:
+        fail('invalid_token', status=401)
+    try:
+        claims = await manager.provider.userinfo(value[7:])
+    except InvalidToken:
+        fail('invalid_token', status=401)
+    except ProviderUnavailable:
+        fail('temporarily_unavailable', status=503)
+    sub = claims.get('sub')
+    if not isinstance(sub, str) or not sub:
+        fail('invalid_token', status=401)
+    return db.scalar(select(User).where(User.sub == sub))
+
+
+@router.get('/api/account/connections')
+def account_connections(db: Session = Depends(get_db), user=Depends(account_api_user)):
+    rows = []
+    if user:
+        grants = db.scalars(select(OAuthGrant).where(OAuthGrant.user_id == user.id,
+            OAuthGrant.revoked.is_(False), OAuthGrant.expires > now())).all()
+        for grant in grants:
+            client = db.get(OAuthClient, grant.client_id)
+            rows.append({'id': grant.id, 'name': client.name if client else 'AI client', 'created': grant.created})
+    return JSONResponse({'grants': rows}, headers=NO_STORE)
+
+
+@router.delete('/api/account/connections/{grant_id}')
+def account_disconnect(grant_id: str, db: Session = Depends(get_db), user=Depends(account_api_user)):
+    if user:
+        db.execute(update(OAuthGrant).where(OAuthGrant.id == grant_id, OAuthGrant.user_id == user.id).values(revoked=True))
+        db.commit()
+    return JSONResponse({'ok': True}, headers=NO_STORE)
