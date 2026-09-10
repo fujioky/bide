@@ -1,0 +1,35 @@
+/* Base palettes. Lyra has no single brand colour: each article theme owns its
+   own palette. These are the raw values; themes.css maps them to semantics. */
+:root{
+  /* Deep space — home / index */
+  --space-950:#080b10; --space-900:#0d1117; --space-850:#12171f; --space-800:#161b22;
+  --space-700:#21262d; --space-600:#30363d; --space-500:#484f58;
+  --space-fg:#e6edf3; --space-fg-dim:#8b949e;
+  --star-blue:#7aa2f7; --star-blue-dim:#4d6ba8; --star-cyan:#7dcfff;
+
+  /* Tokyo Night Storm — template A, deep technical */
+  --tokyo-bg:#1a1b26; --tokyo-surface:#24283b; --tokyo-inset:#292e42; --tokyo-line:#2f3549;
+  --tokyo-body:#a9b1d6; --tokyo-head:#c0caf5; --tokyo-dim:#565f89;
+  --tokyo-blue:#7aa2f7; --tokyo-purple:#bb9af7; --tokyo-orange:#ff9e64;
+  --tokyo-green:#9ece6a; --tokyo-red:#f7768e; --tokyo-teal:#73daca;
+
+  /* Data light — template B, infographic */
+  --data-bg:#ffffff; --data-card:#edf2f7; --data-zebra:#f7fafc; --data-line:#e2e8f0;
+  --data-body:#2d3748; --data-head:#1a202c; --data-dim:#718096;
+  --data-blue:#3182ce; --data-green:#38a169; --data-red:#e53e3e; --data-amber:#d69e2e;
+
+  /* Ivory — template C, literary essay */
+  --ivory-bg:#faf8f5; --ivory-raised:#f4f0e9; --ivory-rule:#e5e0d8;
+  --ivory-body:#3d3d3d; --ivory-head:#1a1a1a; --ivory-quote:#6b7280;
+  --ivory-amber:#92400e;
+
+  /* Workbench — template D, interactive tutorial */
+  --gh-bg:#ffffff; --gh-surface:#f6f8fa; --gh-line:#d0d7de;
+  --gh-body:#24292f; --gh-head:#1b1f24; --gh-dim:#57606a;
+  --gh-green:#1a7f37; --gh-green-solid:#2da44e; --gh-blue:#0969da;
+
+  /* Obsidian — template E, dark magazine */
+  --mag-bg:#000000; --mag-raised:#0a0a0a; --mag-rule:#262626;
+  --mag-body:#d4d4d4; --mag-head:#ffffff; --mag-dim:#8a8a8a;
+  --mag-gold:#c9a96e;
+}

@@ -1,0 +1,66 @@
+/* ── DS 运行时配套样式 ──
+   代码高亮的 token 颜色走主题变量，六套皮肤各自成立。 */
+
+.tk-k { color: var(--tokyo-purple, #bb9af7); }          /* 关键字 */
+.tk-b { color: var(--accent); }                          /* 内建 / 库 */
+.tk-s { color: var(--tokyo-green, #9ece6a); }            /* 字符串 */
+.tk-c { color: var(--text-muted); font-style: italic; }  /* 注释 */
+.tk-n { color: var(--tokyo-orange, #ff9e64); }           /* 数字 */
+
+/* 浅色皮肤下换一组够对比的颜色 */
+[data-lyra-theme="data"] .tk-k,
+[data-lyra-theme="tutorial"] .tk-k,
+[data-lyra-theme="essay"] .tk-k { color: #8250df; }
+[data-lyra-theme="data"] .tk-s,
+[data-lyra-theme="tutorial"] .tk-s,
+[data-lyra-theme="essay"] .tk-s { color: #0a7d33; }
+[data-lyra-theme="data"] .tk-n,
+[data-lyra-theme="tutorial"] .tk-n,
+[data-lyra-theme="essay"] .tk-n { color: #bc4c00; }
+
+/* 复制按钮反馈 */
+figure figcaption button[data-lyra-copy] { transition: color var(--dur-fast) var(--ease-standard); }
+figure figcaption button[data-lyra-copy]:hover { color: var(--accent); }
+
+/* ── 古文引用：设计系统指定的 --font-quote-cjk ── */
+.lyra-quote-cjk,
+.lyra-quote-cjk p,
+.lyra-quote-cjk span {
+  font-family: var(--font-quote-cjk, "Noto Serif SC", "Songti SC", serif);
+  letter-spacing: .02em;
+}
+
+/* ── 图片查看器 ── */
+.lyra-lightbox {
+  position: fixed; inset: 0; z-index: 999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--sp-4);
+  padding: var(--sp-7) var(--sp-5);
+  background: rgba(0, 0, 0, .82);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  animation: lyra-lb-in 160ms var(--ease-out, cubic-bezier(.16, .84, .44, 1));
+  cursor: zoom-out;
+}
+.lyra-lightbox img {
+  max-width: min(1200px, 94vw); max-height: 82vh;
+  object-fit: contain; display: block;
+  border-radius: var(--radius-3, 8px);
+  background: #fff;
+  cursor: default;
+}
+.lyra-lightbox figcaption {
+  max-width: min(900px, 92vw); text-align: center;
+  font-family: var(--font-sans, system-ui); font-size: 13px; line-height: 1.7;
+  color: rgba(255, 255, 255, .78);
+}
+.lyra-lightbox .lb-close {
+  position: absolute; top: 18px; right: 20px;
+  width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .18);
+  color: #fff; font-size: 16px; line-height: 1;
+}
+.lyra-lightbox .lb-close:hover { background: rgba(255, 255, 255, .2); }
+@keyframes lyra-lb-in { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) { .lyra-lightbox { animation: none; } }

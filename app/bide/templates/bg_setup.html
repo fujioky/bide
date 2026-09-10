@@ -1,0 +1,104 @@
+<!doctype html><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bitget passphrase</title>
+<link rel="stylesheet" href="/ds/ds-runtime.css">
+<style>
+ body{font:15px/1.65 system-ui,-apple-system,"PingFang SC",sans-serif;
+      background:var(--surface-page,#f7f8fa);color:var(--text-body,#24292f);
+      margin:0;padding:32px 16px;display:flex;justify-content:center}
+ .w{width:100%;max-width:520px}
+ h1{font-size:20px;margin:0 0 4px;color:var(--text-heading,#111)}
+ .sub{color:var(--text-muted,#6b7280);font-size:13px;margin:0 0 24px}
+ .card{background:var(--surface-card,#fff);border:1px solid var(--border-subtle,#e5e7eb);
+       border-radius:10px;padding:18px 18px 20px;margin-bottom:16px}
+ label{display:block;font-size:13px;font-weight:600;margin:0 0 6px}
+ input,select{width:100%;box-sizing:border-box;padding:9px 11px;font:inherit;
+       border:1px solid var(--border-subtle,#d0d7de);border-radius:7px;background:#fff}
+ .row{display:flex;gap:10px;margin-top:14px;align-items:center}
+ button{padding:9px 16px;font:inherit;font-weight:600;border-radius:7px;cursor:pointer;
+        border:1px solid transparent;background:var(--accent,#2563eb);color:#fff}
+ button.sec{background:#fff;color:var(--text-body,#374151);border-color:var(--border-subtle,#d0d7de);font-weight:500}
+ button:disabled{opacity:.5;cursor:default}
+ .st{font-size:13px;margin:14px 0 0;padding:10px 12px;border-radius:7px;display:none;white-space:pre-wrap}
+ .st.ok{display:block;background:#ecfdf5;color:#065f46}
+ .st.err{display:block;background:#fef2f2;color:#991b1b}
+ .st.info{display:block;background:#f3f4f6;color:#374151}
+ .note{font-size:12.5px;color:var(--text-muted,#6b7280);margin:10px 0 0}
+ .ex{color:#991b1b}
+ pre{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:7px;overflow:auto;
+     font-size:12px;line-height:1.5;max-height:340px;margin:12px 0 0}
+ code{background:#f3f4f6;padding:1px 5px;border-radius:4px;font-size:12.5px}
+</style>
+<div class="w">
+<h1>Bitget passphrase</h1>
+<p class="sub">加密保存在数据库（AES-256-GCM，密钥在环境变量里、不落盘）。这只防止有人读到磁盘文件或 Git 仓库，防不住服务器本身被攻破。<br>
+交易 key 的 passphrase <b>12 小时后自动失效</b>，每天操作前重输一次；只读 key 不设期限（它不能下单，而且看板的实时行情靠它）。</p>
+
+<div class="card">
+  <label for="slot">用于哪把 key</label>
+  <select id="slot">
+    <option value="ro">只读 key（行情、对账）</option>
+    <option value="trade">交易 key（下单）</option>
+  </select>
+  <div style="height:14px"></div>
+  <label for="p">passphrase</label>
+  <input id="p" type="password" autocomplete="off" placeholder="创建 API Key 时设的那个">
+  <div class="row">
+    <button id="save">加密保存</button>
+    <button id="test" class="sec">保存并测行情</button>
+    <button id="del" class="sec">删除</button>
+  </div>
+  <div id="st" class="st"></div>
+</div>
+
+<div class="card">
+  <label>保险箱状态</label>
+  <div id="state" class="note">读取中…</div>
+  <pre id="out" style="display:none"></pre>
+</div>
+</div>
+<script>
+const $=(i)=>document.getElementById(i);
+const st=(cls,msg)=>{const e=$('st');e.className='st '+cls;e.textContent=msg;};
+async function j(url,opt){const r=await fetch(url,Object.assign({credentials:'same-origin'},opt||{}));
+  let d=null;try{d=await r.json()}catch{}; return {ok:r.ok,status:r.status,d};}
+async function refresh(){
+  const {ok,d}=await j('/api/bg/vault');
+  if(!ok){$('state').textContent='读不到状态';return;}
+  const f=(s)=>{const x=d.slots[s];
+    if(!x.saved) return '未保存'+(x.ttlHours?('（有效期 '+x.ttlHours+' 小时）'):'');
+    if(x.expired) return '<b class="ex">已过期</b>（存于 '+new Date(x.at).toLocaleString()+'）· 需重新输入';
+    if(!x.readable) return '<b class="ex">解不开</b>（BG_VAULT_SECRET 变过）· 需重新输入';
+    if(x.leftMin==null) return '已保存 · '+new Date(x.at).toLocaleString()+' · 长期有效';
+    const h=Math.floor(x.leftMin/60), m=x.leftMin%60;
+    return '已保存 · 还剩 <b>'+(h?h+' 小时 ':'')+m+' 分钟</b>（共 '+x.ttlHours+' 小时）';};
+  $('state').innerHTML='只读 key（行情、对账）：'+f('ro')+'<br>交易 key（下单）：'+f('trade')+
+    (d.hasVaultSecret?'':'<br><b>缺 BG_VAULT_SECRET，保存会失败</b>');
+}
+async function save(){
+  const p=$('p').value; if(!p){st('err','先填 passphrase');return false;}
+  st('info','保存中…');
+  const {ok,d}=await j('/api/bg/vault',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({slot:$('slot').value,passphrase:p})});
+  if(!ok){st('err','保存失败：'+((d&&d.error)||'未知'));return false;}
+  $('p').value=''; st('ok','已加密保存'); refresh(); return true;
+}
+$('save').onclick=save;
+$('del').onclick=async()=>{
+  const {ok,d}=await j('/api/bg/vault?slot='+$('slot').value,{method:'DELETE'});
+  st(ok?'ok':'err',ok?'已删除':'删除失败：'+((d&&d.error)||'')); refresh();
+};
+$('test').onclick=async()=>{
+  if(!await save())return;
+  st('info','正在向 Bitget 请求实时行情…');
+  const {ok,d}=await j('/api/bg/probe',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({slot:$('slot').value,path:'/api/v3/stockplus/market/quote',
+      query:{symbol:'NVDA.US'},save:true})});
+  $('out').style.display='block';
+  $('out').textContent=JSON.stringify(d,null,1).slice(0,6000);
+  const code=d&&d.body&&d.body.code;
+  if(ok&&code==='00000')st('ok','通了，行情可读。');
+  else st('err','没通：'+(code||d&&d.status||'')+' '+((d&&d.body&&d.body.msg)||''));
+};
+refresh();
+</script>

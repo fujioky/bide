@@ -1,0 +1,12 @@
+/* Minimal element defaults. Every surface inherits from the active theme. */
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--surface-page);color:var(--text-body);font-family:var(--font-body);font-size:var(--fs-body);line-height:var(--lh-body);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+h1,h2,h3,h4{font-family:var(--font-heading);color:var(--text-heading);line-height:var(--lh-heading);letter-spacing:var(--tracking-tight)}
+a{color:var(--link);text-decoration:none}
+a:hover{color:var(--link);text-decoration:underline;text-underline-offset:3px}
+code,pre{font-family:var(--font-code);font-size:var(--fs-code)}
+code{background:var(--inline-code-bg);color:var(--inline-code-fg);padding:1px 5px;border-radius:var(--radius-1)}
+pre{background:var(--code-bg);color:var(--code-fg);overflow-x:auto}
+table{border-collapse:collapse;font-variant-numeric:tabular-nums}
+button{font-family:inherit}
+::selection{background:var(--accent);color:var(--on-accent)}

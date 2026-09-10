@@ -1,0 +1,34 @@
+<!-- @dsCard group="Components" viewport="700x420" name="Core — Button / Tag / Pill / ArticleCard" subtitle="Four variants of the index card, three button skins, filter pills" -->
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.js"></script>
+<style>html,body{margin:0}body{background:var(--surface-page);color:var(--text-body);font-family:var(--font-body);padding:18px 20px;}.lbl{font-family:var(--font-mono-display);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}</style><link rel="stylesheet" href="/ds/ds-runtime.css"><script src="/ds/ds-runtime.js" defer></script></head>
+<body data-lyra-theme="home"><div id="root"></div><script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const DS = window.LyraBlogDesignSystem_fbfdef;
+
+const { Button, Tag, Pill, ArticleCard, LyraIcon } = DS;
+function Demo(){
+  return <div style={{display:'grid',gap:20}}>
+    <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
+      <Button>发送</Button>
+      <Button variant="outline">取消</Button>
+      <Button variant="quiet" icon={<LyraIcon name="rss" size={14}/>}>订阅</Button>
+      <Button variant="ghost" size="sm" icon={<LyraIcon name="chevron-right" size={13}/>}>登录</Button>
+      <Button disabled>已发布</Button>
+    </div>
+    <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+      <Pill active>全部</Pill><Pill>研究</Pill><Pill>技术</Pill><Pill>文化</Pill><Pill>随笔</Pill>
+    </div>
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,alignItems:'start'}}>
+      <ArticleCard category="研究" date="08/21" title="欧洲各国博士税后工资" summary="15 个国家的横向对比" tags={["留学","博士"]} readTime="8 min"/>
+      <ArticleCard variant="cover" category="技术" date="08/18" title="Flow Matching 实战" summary="从 ODE 到可用的训练脚本" tags={["生成模型"]} readTime="15 min"/>
+      <ArticleCard hidden category="文化" date="08/20" title="地泽临 · 卦例解析" summary="(仅管理员可见)" readTime="6 min"/>
+      <ArticleCard variant="row" category="技术" date="08/14" title="把 Nextflow 跑在单机上" summary="一句话摘要" readTime="3 min"/>
+    </div>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+</script></body></html>

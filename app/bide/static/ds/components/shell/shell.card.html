@@ -1,0 +1,83 @@
+<!-- @dsCard group="Components" viewport="820x620" name="Shell — Header / Footer / TOC 轨道" subtitle="线上实装：固定页头、真实进度条、右侧悬停撑开目录、回顶部" -->
+<!doctype html><html lang="zh"><head><meta charset="utf-8">
+<link rel="stylesheet" href="/ds/shell.css">
+<link rel="stylesheet" href="/ds/tokens/fonts.css">
+<link rel="stylesheet" href="/ds/tokens/base.css">
+<link rel="stylesheet" href="/ds/ds-runtime.css">
+<style>
+html{scroll-behavior:smooth}
+body{background:var(--surface-page);color:var(--text-body);font-family:var(--font-body)}
+.wrap{max-width:620px;margin:0 auto;padding:var(--sp-6) var(--sp-6) var(--sp-8)}
+h2{font-size:var(--fs-h2);color:var(--text-heading);margin:var(--sp-7) 0 var(--sp-3)}
+p{margin:0 0 var(--sp-4);font-size:var(--fs-small);line-height:var(--lh-body);color:var(--text-body)}
+.hint{font-family:var(--font-code);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-muted);margin-bottom:var(--sp-5)}
+.themes{display:flex;gap:6px;flex-wrap:wrap;margin:var(--sp-4) 0 0}
+.themes button{padding:5px 12px;border-radius:var(--radius-pill);cursor:pointer;
+  background:transparent;border:1px solid var(--border-hairline);color:var(--text-muted);
+  font-family:var(--font-code);font-size:11px}
+.themes button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+</style></head>
+<body data-lyra-theme="home">
+
+<header class="lyra-header">
+  <a class="lyra-mark" href="#"><img src="/ds/assets/lyra-icon.svg" alt="">Lyra</a>
+  <nav>
+    <a href="#">首页</a>
+    <a class="lyra-kind" href="#">研究笔记</a>
+    <span class="lyra-avatar" title="管理员">杜</span>
+    <a href="#">登出</a>
+  </nav>
+</header>
+
+<div class="wrap" data-lyra-content>
+  <p class="hint">滚动看进度条 · 鼠标移到右侧横线上</p>
+
+  <h2>页头</h2>
+  <p>固定在顶部，桌面 64px、移动 52px。Logo 恒在左，导航恒在右。底部那条 2px 是真实滚动进度，由 <code>shell.js</code> 每帧写入 <code>--lyra-progress</code>。</p>
+
+  <h2>目录轨道</h2>
+  <p>右侧边缘一组短横线，长度按标题层级加该节实际字数算出来。横线本身可点，点了平滑滚到对应位置。</p>
+
+  <h2>悬停撑开</h2>
+  <p>鼠标移到某条横线上，本条与上下各两条按距离展开成标题：最近的一条满色，次级 80% 不透明，再外层 45%。同时整条轨道的间距从 7px 收到 3px。</p>
+
+  <h2>滚动高亮</h2>
+  <p>当前所在章节的横线换成强调色并加粗到 3px。判定线在页头下方 22vh 处。</p>
+
+  <h2>窄屏</h2>
+  <p>1180px 以下横线换成右下角「☰ 目录」按钮，点开是底部弹出面板，带拖拽指示条，每项 44px 触摸目标。</p>
+
+  <h2>换肤</h2>
+  <p>结构不变，颜色全部读语义 token。点下面切换看同一套结构在六套皮肤下的样子。</p>
+  <div class="themes">
+    <button type="button" data-t="home" aria-pressed="true">home</button>
+    <button type="button" data-t="tech" aria-pressed="false">tech</button>
+    <button type="button" data-t="data" aria-pressed="false">data</button>
+    <button type="button" data-t="essay" aria-pressed="false">essay</button>
+    <button type="button" data-t="tutorial" aria-pressed="false">tutorial</button>
+    <button type="button" data-t="magazine" aria-pressed="false">magazine</button>
+  </div>
+
+  <h2>页尾</h2>
+  <p>最小 80px，版权在左，回顶部在右。</p>
+</div>
+
+<footer class="lyra-footer"><div class="lyra-footer-in">
+  <span>© 2026 Lyra · example.org</span>
+  <span class="f-right"><a href="#">← 全部文章</a><a href="#" class="lyra-top">↑ 回顶部</a></span>
+</div></footer>
+
+<script src="/ds/shell.js"></script>
+<script src="/ds/ds-runtime.js" defer></script>
+<script>
+document.querySelectorAll('.themes button').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.body.dataset.lyraTheme = b.dataset.t;
+    document.querySelectorAll('.themes button').forEach(function (x) {
+      x.setAttribute('aria-pressed', x === b);
+    });
+  });
+});
+</script>
+</body></html>

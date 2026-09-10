@@ -1,0 +1,14 @@
+*
+!app/
+!app/**
+!packages/
+!packages/fujioky-auth/
+!packages/fujioky-auth/**
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.venv
+**/tests
+**/dist
+**/build
+**/*.egg-info

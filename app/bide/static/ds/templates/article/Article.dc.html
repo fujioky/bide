@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/ds/ds-runtime.css"><script src="/ds/ds-runtime.js" defer></script></head>
+<body>
+<x-dc>
+<!-- @template name="Lyra article page" description="An article page wearing any of the six Lyra skins: shell protocol, reading measure, code / callout / quote blocks, TOC rail and Grok launcher." -->
+<helmet><script src="./ds-base.js"></script><script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.js"></script><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><style>html,body{margin:0}</style></helmet>
+<div data-lyra-theme="{{ theme }}" style="position:relative;min-height:100vh;display:flex;flex-direction:column;background:var(--surface-page);color:var(--text-body);font-family:var(--font-body);font-size:var(--fs-body);line-height:var(--lh-body)">
+<x-import component-from-global-scope="LyraBlogDesignSystem_fbfdef.Header" sticky="{{ true }}" progress="{{ 24 }}" admin="{{ admin }}" hint-size="100%,64px"></x-import>
+<main style="flex:1;position:relative">
+<article style="max-width:780px;margin:0 auto;padding:64px 48px 96px">
+<div style="font-family:var(--font-mono-display);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:12px">Deep technical</div>
+<h1 style="margin:0;font-size:40px;line-height:1.15;font-weight:600;color:var(--text-heading);font-family:var(--font-heading)">使用 Flow Matching 训练 3D 人脸生成器</h1>
+<div style="display:flex;gap:12px;margin-top:16px;font-family:var(--font-code);font-size:14px;color:var(--text-muted)"><span>Lyra</span><span style="opacity:.5">·</span><span>2026-08-20</span><span style="opacity:.5">·</span><span>15 min read</span></div>
+<div style="height:1px;background:var(--border-hairline);margin:24px 0 48px"></div>
+<h2 style="margin:0 0 16px;font-size:24px;font-weight:600;color:var(--text-heading);font-family:var(--font-heading)">问题背景</h2>
+<p style="margin:0 0 16px">扩散模型在 3D 上的痛点不是质量，而是采样成本。Flow matching 把生成过程重写成一条常微分方程，训练目标从"预测噪声"变成"预测速度场"，采样步数因此可以压到十几步。</p>
+<x-import component-from-global-scope="LyraBlogDesignSystem_fbfdef.CodeBlock" lang="python" code="def flow(x0, x1, t):
+    return (1 - t) * x0 + t * x1" hint-size="100%,140px"></x-import>
+<x-import component-from-global-scope="LyraBlogDesignSystem_fbfdef.Callout" kind="tip" hint-size="100%,80px">先用 128³ 体素把整条链路跑通，再考虑分辨率。</x-import>
+<h2 style="margin:48px 0 16px;font-size:24px;font-weight:600;color:var(--text-heading);font-family:var(--font-heading)">实验结果</h2>
+<p style="margin:0 0 16px">在 8k 张扫描人脸上训练 40 个 epoch，16 步采样的 FID 已经接近 250 步的扩散基线。</p>
+<x-import component-from-global-scope="LyraBlogDesignSystem_fbfdef.FigureImage" ratio="16 / 9" caption="图 1 · 速度场轨迹" hint-size="100%,300px"></x-import>
+<x-import component-from-global-scope="LyraBlogDesignSystem_fbfdef.PullQuote" cite="训练日志" hint-size="100%,100px">把采样步数写进 checkpoint 的元数据，否则三个月后你不会记得这条曲线是几步跑出来的。</x-import>
+</article>
+<sc-if value="{{ showToc }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="LyraBlogDesignSystem_fbfdef.TocRail" sections="{{ sections }}" activeIndex="{{ 1 }}" hint-size="60px,180px"></x-import></sc-if>
+</main>
+<x-import component-from-global-scope="LyraBlogDesignSystem_fbfdef.Footer" hint-size="100%,120px"></x-import>
+<x-import component-from-global-scope="LyraBlogDesignSystem_fbfdef.GrokLauncher" hint-size="48px,48px"></x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;tech&quot;,&quot;data&quot;,&quot;essay&quot;,&quot;tutorial&quot;,&quot;magazine&quot;],&quot;default&quot;:&quot;tech&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Skin&quot;},&quot;admin&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Shell&quot;},&quot;showToc&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Shell&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      theme: this.props.theme ?? "tech",
+      admin: this.props.admin ?? false,
+      showToc: this.props.showToc ?? true,
+      sections: [
+        { title: "问题背景", weight: 2 },
+        { title: "方法", weight: 3 },
+        { title: "数学推导", weight: 2, level: 2 },
+        { title: "实验结果", weight: 2 },
+        { title: "讨论与展望", weight: 1 }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

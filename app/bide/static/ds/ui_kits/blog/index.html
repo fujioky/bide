@@ -1,0 +1,44 @@
+<!-- @dsCard group="Lyra Blog" viewport="1440x900" name="Click-through kit" subtitle="Home → five article templates, with admin / mobile / TOC / Grok states" -->
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>Lyra Blog · UI kit</title>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.js"></script>
+<style>html,body{margin:0;background:#0a0d12}#root{min-height:100vh}.kitbar{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:100;display:flex;gap:6px;align-items:center;padding:7px 10px;border-radius:999px;background:rgba(10,13,18,.86);backdrop-filter:blur(14px);border:1px solid #30363d;font-family:"JetBrains Mono",monospace;font-size:11px;color:#8b949e}.kitbar button{font:inherit;padding:5px 10px;border-radius:999px;border:1px solid transparent;background:none;color:#8b949e;cursor:pointer}.kitbar button[data-on="1"]{background:#7aa2f7;color:#0d1117;border-color:#7aa2f7}.kitbar span{opacity:.5;padding:0 4px}</style><link rel="stylesheet" href="/ds/ds-runtime.css"><script src="/ds/ds-runtime.js" defer></script></head>
+<body><div id="root"></div>
+<script src="../../_ds_bundle.js"></script>
+<script src="data.js"></script>
+<script type="text/babel" src="PageShell.jsx"></script>
+<script type="text/babel" src="Home.jsx"></script>
+<script type="text/babel" src="TemplateTech.jsx"></script>
+<script type="text/babel" src="TemplateData.jsx"></script>
+<script type="text/babel" src="TemplateEssay.jsx"></script>
+<script type="text/babel" src="TemplateTutorial.jsx"></script>
+<script type="text/babel" src="TemplateMagazine.jsx"></script>
+<script type="text/babel">
+const SCREENS=[["home","首页"],["tech","A 技术"],["data","B 信息图"],["essay","C 散文"],["tutorial","D 交互"],["magazine","E 杂志"]];
+function App(){
+  const [screen,setScreen]=React.useState("home");
+  const [mobile,setMobile]=React.useState(false);
+  const [admin,setAdmin]=React.useState(false);
+  const Screen={home:Home,tech:TemplateTech,data:TemplateData,essay:TemplateEssay,tutorial:TemplateTutorial,magazine:TemplateMagazine}[screen];
+  const view=<Screen key={screen+mobile+admin} mobile={mobile} admin={admin} onOpen={setScreen} onHome={()=>setScreen("home")}/>;
+  return <>
+    {mobile
+      ? <div style={{minHeight:"100vh",display:"grid",placeItems:"center",padding:"32px 0"}}>
+          <div style={{width:390,height:844,overflow:"hidden",borderRadius:28,border:"1px solid #30363d",boxShadow:"0 24px 70px rgba(0,0,0,.6)"}}>
+            <div style={{width:390,height:844,overflowY:"auto"}}>{view}</div>
+          </div>
+        </div>
+      : view}
+    <div className="kitbar">
+      {SCREENS.map(([k,l])=><button key={k} data-on={screen===k?"1":"0"} onClick={()=>setScreen(k)}>{l}</button>)}
+      <span>|</span>
+      <button data-on={mobile?"1":"0"} onClick={()=>setMobile(m=>!m)}>390px</button>
+      <button data-on={admin?"1":"0"} onClick={()=>setAdmin(a=>!a)}>管理员</button>
+    </div>
+  </>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>

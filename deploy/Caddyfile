@@ -1,0 +1,28 @@
+{
+	admin off
+}
+
+(common) {
+	encode zstd gzip
+	header -Server
+}
+
+note.example.com {
+	import common
+	reverse_proxy note:8080
+}
+
+bide.example.com {
+	import common
+	reverse_proxy bide:8080
+}
+
+mcp.bide.example.com {
+	import common
+	reverse_proxy bide:8080
+}
+
+quant.bide.example.com {
+	import common
+	reverse_proxy quant:8080
+}

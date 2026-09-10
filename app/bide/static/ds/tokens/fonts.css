@@ -1,0 +1,11 @@
+/* Lyra Blog webfonts.
+   NOTE: no font binaries were supplied with the brief — every family below is
+   loaded from Google Fonts. Replace with self-hosted @font-face when available.
+   Latin: Inter, Space Grotesk, Newsreader, Playfair Display, JetBrains Mono,
+          Fira Code, IBM Plex Mono.
+   CJK:   Noto Sans SC, Noto Serif SC.
+   楷体 (LXGW WenKai) was pulled back out: it is only available here as a remote
+   CDN stylesheet with no font file in the project. Upload lxgwwenkai-regular.woff2
+   and re-add it as a local @font-face + --font-kai token. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&family=Fira+Code:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;500;600;700&display=swap");

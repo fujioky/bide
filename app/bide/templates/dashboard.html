@@ -1,0 +1,1989 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-lyra-theme="essay">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>看板 · bide</title>
+<link rel="icon" href="/static/icon.svg">
+<link rel="stylesheet" href="/ds/shell.css">
+<link rel="stylesheet" href="/ds/ds-runtime.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- 三套皮肤各自的字体：data 用 Space Grotesk + Inter + IBM Plex Mono，
+     home 用 JetBrains Mono + Fira Code，essay 用 Newsreader + 思源宋体。 -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,600&family=JetBrains+Mono:wght@400;500;600;700&family=Fira+Code:wght@400;500&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+/* 类里写了 display 的元素（.ordform / .reclead）会盖掉 hidden 的默认 display:none，
+   收起状态下会留一个空框——这里统一兜住。 */
+[hidden]{display:none !important}
+/* 区间三色与涨跌色：与图表里的色带、圆点严格同源（见 tickerchart.js 的 zLow/zPull/zHigh）。
+   浅色皮肤一套，深色皮肤（home）一套，象牙皮肤沿用浅色但压低饱和。 */
+:root,[data-lyra-theme="data"]{--z-g:#2f855a;--z-b:#2b6cb0;--z-a:#b7791f;--up:#2f855a;--down:#c53030;--lev:#6b46c1;
+  --z-g-bg:rgba(56,161,105,.20);--z-b-bg:rgba(49,130,206,.13);--z-a-bg:rgba(214,158,46,.17)}
+[data-lyra-theme="home"]{--z-g:#9ece6a;--z-b:#7aa2f7;--z-a:#e0af68;--up:#9ece6a;--down:#f7768e;--lev:#bb9af7;
+  --z-g-bg:rgba(158,206,106,.16);--z-b-bg:rgba(122,162,247,.14);--z-a-bg:rgba(224,175,104,.16)}
+[data-lyra-theme="essay"]{--z-g:#4a7c59;--z-b:#3d6b96;--z-a:#a06a1f;--up:#4a7c59;--down:#a63d3d;--lev:#7a5c9e;
+  --z-g-bg:rgba(74,124,89,.16);--z-b-bg:rgba(61,107,150,.12);--z-a-bg:rgba(160,106,31,.15)}
+
+html,body{height:100%}
+body{background:var(--surface-page);color:var(--text-body);font-family:var(--font-body);
+  font-size:13px;line-height:1.6;overflow:hidden;padding-top:0}
+/* 页面整体不小于 1180px，窄了就横向滚动，绝不让主栏塌掉把文字挤成一列一个字 */
+.dpage{min-width:1180px;height:100vh;display:flex;flex-direction:column}
+a{color:var(--link);text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:3px}
+input,button{font-family:inherit;font-size:inherit;color:inherit}
+input::placeholder{color:var(--text-muted)}
+.mono{font-family:var(--font-code);font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.dn{color:var(--down)}.muted{color:var(--text-muted)}
+
+/* ══ 页头 ══ 64px，左边站点导航，右边纽约 / 北京双时钟 + 皮肤切换 + 登录态 */
+.dhead{height:64px;flex:none;display:flex;align-items:center;gap:28px;padding:0 24px;
+  border-bottom:1px solid var(--border-hairline);background:var(--surface-page);position:relative;z-index:20}
+.dhead .mark{display:flex;align-items:center;gap:8px;font-family:var(--font-heading);font-size:15px;
+  font-weight:600;color:var(--text-heading)}
+.dhead .mark img{width:20px;height:20px}
+.dhead nav{display:flex;gap:18px;font-size:13px;align-items:center}
+.dhead nav a{color:var(--text-muted)}
+.dhead nav .cur{color:var(--text-heading);font-weight:500;border-bottom:2px solid var(--accent);
+  padding-bottom:3px;margin-bottom:-5px}
+.dhead .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.clock{display:flex;align-items:center;gap:8px;padding:5px 12px;border:1px solid var(--border-hairline);
+  border-radius:4px;background:var(--surface-raised);font-family:var(--font-code);font-variant-numeric:tabular-nums}
+.clock .zn{font-size:10px;letter-spacing:.12em;color:var(--text-muted)}
+/* 定宽：秒在走，宽度不能跟着数字变，否则整条页头会左右晃 */
+.clock .tm{font-size:14px;color:var(--text-heading);min-width:66px}
+.clock .tz{font-size:11px;color:var(--text-muted)}
+.clock .dot{width:6px;height:6px;border-radius:50%}
+.clock .ss{font-size:12px;font-family:var(--font-body)}
+@keyframes lyPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.6}}
+.clock .dot.live{animation:lyPulse 3s ease-in-out infinite}
+.thsw{display:flex;border:1px solid var(--border-hairline);border-radius:4px;overflow:hidden}
+.thsw button{border:0;background:transparent;color:var(--text-muted);font-size:11px;padding:4px 9px;
+  cursor:pointer;transition:background .2s,color .2s}
+.thsw button.on{background:var(--text-heading);color:var(--surface-page)}
+.dhead [data-lyra-auth]{display:flex;align-items:center;gap:8px;font-size:12px}
+.dhead [data-lyra-auth] a{color:var(--text-muted)}
+.lyra-avatar{width:28px;height:28px;border-radius:50%;background:var(--surface-inset);
+  border:1px solid var(--border-hairline);display:flex;align-items:center;justify-content:center;
+  overflow:hidden;font-size:12px;color:var(--text-muted)}
+.lyra-avatar img{width:100%;height:100%;object-fit:cover}
+
+/* ══ 主体三栏 ══ 图标栏 56px + 可拖宽侧栏 + 主栏 */
+.dbody{flex:1;display:flex;min-height:0;align-items:stretch}
+.rail{width:56px;flex:none;border-right:1px solid var(--border-hairline);display:flex;flex-direction:column;
+  align-items:center;padding:10px 0;gap:4px;background:var(--surface-page)}
+.rail .rb{width:44px;height:44px;border:0;border-radius:8px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;cursor:pointer;position:relative;font-size:10px;
+  background:transparent;color:var(--text-muted);transition:background .2s,color .2s}
+.rail .rb:hover{background:var(--surface-raised)}
+.rail .rb.on{background:var(--text-heading);color:var(--surface-page)}
+.rail .rb .ic{font-size:15px;line-height:1}
+.rail .rb .bdg{position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;
+  background:var(--down);display:none}
+.rail .rb.has .bdg{display:block}
+.rail .fold{margin-top:auto;width:44px;height:36px;border:0;background:transparent;
+  display:flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer;font-size:14px}
+.rail .fold:hover{color:var(--text-heading)}
+
+.side{width:320px;flex:none;border-right:1px solid var(--border-hairline);display:flex;flex-direction:column;
+  background:var(--surface-page);position:relative;min-height:0}
+.side.hide{display:none}
+/* 拖柄压在侧栏右边缘上，8px 命中区，视觉上看不见 */
+.sdrag{position:absolute;right:-4px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:6}
+.sdrag:hover{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.sbody{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;min-height:0}
+.sbody::-webkit-scrollbar{display:none}
+@keyframes lyFadeA{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes lyFadeB{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.motion .sbody.fa{animation:lyFadeA .4s cubic-bezier(.16,.84,.44,1) both}
+.motion .sbody.fb{animation:lyFadeB .4s cubic-bezier(.16,.84,.44,1) both}
+.pane{display:none}
+.pane.on{display:block}
+
+/* 侧栏通用小件 */
+.ptitle{display:flex;align-items:center;gap:8px;padding:12px 14px 8px}
+.ptitle h2{font-family:var(--font-heading);font-size:14px;font-weight:600;color:var(--text-heading)}
+.ptitle .sub{font-size:11px;color:var(--text-muted);font-weight:400}
+.ptitle .rt{margin-left:auto;font-size:11px;color:var(--text-muted);font-family:var(--font-code)}
+.chip{border:1px solid var(--border-hairline);color:var(--text-muted);background:transparent;
+  border-radius:999px;padding:2px 10px;font-size:11px;cursor:pointer;transition:all .2s}
+.chip:hover{color:var(--text-heading)}
+.chip.on{border-color:var(--text-heading);color:var(--text-heading)}
+.chip.solid{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+.pop{position:absolute;z-index:12;background:var(--panel-bg);-webkit-backdrop-filter:blur(14px);
+  backdrop-filter:blur(14px);border:1px solid var(--border-hairline);border-radius:10px;
+  box-shadow:0 10px 30px rgba(0,0,0,.16);padding:10px 12px}
+.pop .ph{display:flex;align-items:center;font-size:10px;letter-spacing:.12em;color:var(--text-muted);margin-bottom:8px}
+.pop .pf{font-size:10.5px;color:var(--text-muted);margin-top:6px;border-top:1px solid var(--border-hairline);
+  padding-top:6px;line-height:1.5}
+.pop .opt{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:12px;color:var(--text-body)}
+.pop .opt:hover{color:var(--text-heading)}
+.pop .box{width:14px;height:14px;border-radius:3px;border:1px solid var(--border-strong);
+  display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--on-accent);flex:none}
+.pop .opt.on .box{border-color:var(--accent);background:var(--accent)}
+.pop .opt .k{margin-left:auto;font-family:var(--font-code);color:var(--text-muted);font-size:11px}
+
+/* ── 今日关注 ── */
+#today .fbar{display:flex;gap:4px;padding:0 14px 8px;font-size:11px;position:relative}
+#today .fbar .tagpick{margin-left:auto}
+/* 一抹红：只标在正股代码本身的背景上——不画在下面，也不铺满整张卡片。
+   杠杆 ETF 不标（它跟着正股走，标了等于同一件事说两遍）。 */
+.fl{background:linear-gradient(90deg,rgba(197,48,48,.34),rgba(197,48,48,.12) 70%,rgba(197,48,48,0));
+  border-radius:4px;padding:1px 6px 1px 4px;margin-left:-4px;box-decoration-break:clone;
+  -webkit-box-decoration-break:clone}
+#dflag{border:0;background:transparent;cursor:pointer;font-size:17px;line-height:1;
+  color:var(--text-muted,#a0aec0);padding:0 2px}
+#dflag.on{color:#c53030}
+.zt.zw{background:rgba(214,158,46,.16);color:#b7791f}
+.warmn{font-size:11px;color:#b7791f;margin-top:3px;display:flex;align-items:center;gap:5px}
+.warmn::before{content:'';width:6px;height:6px;border-radius:50%;background:#d69e2e;flex:none}
+/* 收盘价 / 实时 分段开关。实时价来自 Bitget 只读行情，固定滞后约 15 分钟，
+   所以 .pxseg .age 会把每只标的的陈旧度如实标出来，不假装是即时价。 */
+#today .pxseg{display:inline-flex;border:1px solid var(--border-hairline);border-radius:999px;overflow:hidden}
+#today .pxseg button{border:0;background:transparent;color:var(--text-muted);font:inherit;font-size:11px;
+  padding:2px 9px;cursor:pointer;white-space:nowrap}
+#today .pxseg button.on{background:var(--surface-raised);color:var(--text-heading);font-weight:600}
+.px.lv{color:var(--text-heading)}
+.px .sess{font-size:9px;color:var(--text-muted);margin-left:3px;font-family:var(--font-body);vertical-align:1px}
+.px .stale{color:var(--z-a)}
+#today .body{padding:0 14px 14px}
+.cut{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--text-muted);margin:10px 0 4px}
+.cut i{flex:1;border-top:1px dashed var(--border-strong)}
+.tierh{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-muted);margin:8px 0 6px}
+.tierh .bar{width:3px;height:11px;border-radius:1px;flex:none}
+.tierh .nm{font-weight:500}
+.tierh .sc{margin-left:auto;font-family:var(--font-code)}
+.cards{display:grid;gap:6px;align-items:start;grid-template-columns:minmax(0,1fr)}
+.side.c2 .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+.side.c3 .cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 卡片外框与左侧 3px 用它所比的那条区间带的颜色，和图上的色带一眼对得上 */
+.tcard{position:relative;min-width:0;border:1px solid var(--border-strong);border-left:3px solid var(--border-strong);
+  border-radius:12px;background:var(--surface-raised);padding:10px 12px;cursor:pointer;
+  box-shadow:var(--shadow-card);transition:box-shadow .2s,opacity .2s}
+.tcard.zg{border-color:var(--z-g)}.tcard.zb{border-color:var(--z-b)}.tcard.za{border-color:var(--z-a)}
+.tcard.sel{border-color:var(--accent);box-shadow:var(--glow-card)}
+.tcard.read{opacity:.55}
+.tcard .rd{position:absolute;top:9px;right:10px;width:16px;height:16px;border-radius:50%;
+  border:1px solid var(--border-strong);background:transparent;cursor:pointer;padding:0;line-height:0;
+  display:flex;align-items:center;justify-content:center;color:transparent}
+.tcard.read .rd{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tcard .cl{display:flex;gap:8px;align-items:baseline;font-family:var(--font-code);
+  font-variant-numeric:tabular-nums;font-size:12.5px;padding-right:22px}
+.tcard .cl b{color:var(--text-heading);font-weight:600;cursor:pointer;
+  text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;
+  text-decoration-color:var(--border-strong)}
+.tcard .cl b:hover{text-decoration-color:var(--accent);color:var(--accent)}
+.lvp{font-size:10px;color:var(--lev);border:1px solid var(--lev);border-radius:3px;padding:0 3px;
+  white-space:nowrap;flex:none}
+.tcard .cl .px{margin-left:auto;min-width:56px;text-align:right}
+.tcard .cl .cg{min-width:50px;text-align:right}
+.tcard .cl .dd{min-width:52px;text-align:right;color:var(--text-muted);font-size:11px}
+/* 两列 / 三列时列宽不够，收掉「距 200 日」并放开定宽 */
+.side.c2 .tcard .cl .dd,.side.c3 .tcard .cl .dd{display:none}
+.side.c2 .tcard .cl .px,.side.c3 .tcard .cl .px{min-width:0}
+.side.c2 .tcard .cl .cg,.side.c3 .tcard .cl .cg{min-width:0;padding-left:6px}
+.tcard .tg{margin-top:6px;display:flex;gap:5px;align-items:center;min-width:0}
+.tcard .tg .zt{font-size:10.5px;padding:1px 7px;border-radius:3px;white-space:nowrap;flex:none}
+.tcard .tg .tn{font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zt.zg{background:var(--z-g-bg);color:var(--z-g)}
+.zt.zb{background:var(--z-b-bg);color:var(--z-b)}
+.zt.za{background:var(--z-a-bg);color:var(--z-a)}
+.zt.zn{background:var(--surface-inset);color:var(--text-muted)}
+.zt.zx{background:var(--z-g-bg);color:var(--z-g)}
+.zt.zd{background:rgba(197,48,48,.12);color:var(--down)}
+.tcard .nt{font-size:11px;color:var(--text-body);border-top:1px dotted var(--border-hairline);
+  padding-top:4px;margin-top:4px;line-height:1.4}
+.tcard .nt .sub{display:block;color:var(--text-muted);font-size:10.5px;margin-top:1px}
+.pempty{font-size:12px;color:var(--text-muted);padding:24px 0;text-align:center}
+
+/* ── 持仓 ── */
+#pos .body{padding:12px 14px}
+.pcols{display:flex;font-size:10px;color:var(--text-muted);margin:12px 0 2px}
+.prow{display:flex;align-items:center;padding:7px 0;border-top:1px solid var(--border-hairline);
+  font-family:var(--font-code);font-variant-numeric:tabular-nums;font-size:12.5px;cursor:pointer}
+.prow:hover{background:var(--surface-raised)}
+.prow b{color:var(--text-heading)}
+.pcols .c1,.prow .c1{width:62px;flex:none}
+.pcols .c2,.prow .c2{width:40px;text-align:right;flex:none}
+.pcols .c3,.prow .c3{width:66px;text-align:right;flex:none}
+.pcols .c4,.prow .c4{flex:1;text-align:right;min-width:0}
+.pcols .c5,.prow .c5{width:52px;text-align:right;font-size:11px;flex:none}
+.pords{margin:0 0 6px 8px;border-left:2px solid var(--border-hairline);padding-left:10px;
+  font-family:var(--font-code);font-size:11px;color:var(--text-muted)}
+.pords .o{display:flex;gap:10px;padding:3px 0}
+.pords .o .sd{font-weight:600}
+.pords .o .pr{margin-left:auto}
+.ptot{display:flex;border-top:1px solid var(--border-strong);padding-top:8px;margin-top:2px;
+  font-family:var(--font-code);font-size:12.5px}
+.ptot .k{font-family:var(--font-body);color:var(--text-muted)}
+.ptot .v{margin-left:auto}
+.pdone{display:flex;padding-top:3px;font-family:var(--font-code);font-size:11.5px;color:var(--text-muted)}
+.pdone .k{font-family:var(--font-body)}
+.pdone .v{margin-left:auto}
+.note{border:1px solid var(--border-hairline);background:var(--surface-raised);border-radius:8px;
+  padding:10px 12px;margin-top:14px;font-size:11.5px;display:flex;flex-direction:column;gap:8px}
+.note.warn{border-left:3px solid var(--down)}
+.note.ok{border-left:3px solid var(--up);flex-direction:row;align-items:center;padding:8px 12px}
+.note b{color:var(--text-heading)}
+.note .r1{display:flex;gap:6px;align-items:baseline}
+.note .r2{display:flex;gap:8px;align-items:center}
+.slabel{font-size:10px;letter-spacing:.12em;color:var(--text-muted);margin:18px 0 6px}
+.agrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.acell{background:var(--surface-raised);border:1px solid var(--border-hairline);border-radius:8px;padding:8px 10px}
+.acell .k{font-size:10px;color:var(--text-muted)}
+.acell .v{font-family:var(--font-code);font-size:14px;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.orow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border-hairline);
+  font-family:var(--font-code);font-size:12px}
+.orow .lab{color:var(--text-muted);font-family:var(--font-body);font-size:11px}
+.orow .qty{margin-left:auto}
+.foot{font-size:10.5px;color:var(--text-muted);margin-top:14px;line-height:1.5}
+#bgpass{width:100%;box-sizing:border-box;padding:6px 8px;border-radius:6px;border:1px solid var(--border-hairline);
+  background:var(--surface-page);color:var(--text-body);font-size:12px;font-family:var(--font-code)}
+.bgerr{color:var(--down)}
+.bgok{color:var(--up)}
+.bgwarn{color:var(--z-a)}
+.dline{display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:12px}
+.dline .v{margin-left:auto;font-family:var(--font-code);font-variant-numeric:tabular-nums}
+.dline .s{font-family:var(--font-code);font-weight:600;color:var(--text-heading)}
+.dline .q{color:var(--text-muted);font-family:var(--font-code);font-size:11px}
+.bgsec{margin-top:10px;padding-top:8px;border-top:1px dotted var(--border-hairline)}
+.bgsec:first-child{margin-top:0;padding-top:0;border-top:0}
+.bgsec h4{margin:0 0 4px;font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.04em}
+
+/* ── 关注 ── */
+#watch .body{padding:12px 14px}
+#watch .addr{display:flex;gap:6px;margin-top:10px}
+#watch .addr input{flex:1;border:1px solid var(--border-hairline);background:var(--surface-raised);
+  color:var(--text-body);border-radius:4px;padding:6px 10px;font-family:var(--font-code);font-size:12px;outline:none}
+#watch .addr input:focus{border-color:var(--accent)}
+.sortr{display:flex;align-items:center;gap:6px;margin-top:12px;position:relative}
+.sortr .lb{font-size:10px;letter-spacing:.12em;color:var(--text-muted)}
+.sortb{display:flex;align-items:center;gap:5px;font-size:11.5px;cursor:pointer;border:1px solid var(--border-hairline);
+  border-radius:999px;padding:2px 10px;color:var(--text-body);background:transparent}
+.sortb .dir{color:var(--text-muted);font-size:10px}
+.sortr .mgr{margin-left:auto;font-size:11px;color:var(--link);cursor:pointer;background:none;border:0;padding:0}
+.pop .srow{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12px}
+.pop .srow:hover{background:var(--surface-inset)}
+.pop .srow.on{background:var(--surface-inset);color:var(--text-heading)}
+.pop .srow .h{margin-left:auto;font-size:10px;color:var(--text-muted)}
+.tmgr{border:1px solid var(--border-hairline);border-radius:8px;background:var(--surface-raised);
+  padding:8px 10px;margin-top:8px;font-size:11.5px}
+.tmgr .tr{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--border-hairline)}
+.tmgr .tr:first-child{border-top:0}
+.tmgr .tr input{flex:1;min-width:0;border:1px solid transparent;background:transparent;color:var(--text-body);
+  font-size:12px;padding:2px 4px;border-radius:3px;outline:none}
+.tmgr .tr input:focus{border-color:var(--border-hairline);background:var(--surface-page)}
+.tmgr .tr .k{font-family:var(--font-code);color:var(--text-muted);font-size:11px}
+.tmgr .tr .mg{font-size:10.5px;color:var(--link);cursor:pointer;background:none;border:0;padding:0}
+.tmgr .tr .del{color:var(--down);cursor:pointer;font-size:14px;line-height:1;background:none;border:0;padding:0}
+.tmgr .newr{margin-top:6px;padding-top:6px;border-top:1px solid var(--border-hairline)}
+.tmgr .newr input{width:100%;box-sizing:border-box;border:1px solid var(--border-hairline);
+  background:var(--surface-page);color:var(--text-body);border-radius:4px;padding:5px 8px;font-size:12px;outline:none}
+.tchips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.hint{font-size:10.5px;color:var(--text-muted);margin-top:6px}
+.ghead{font-size:10px;letter-spacing:.12em;color:var(--text-muted);margin:12px 0 2px}
+.wrow{display:flex;gap:7px;align-items:center;padding:6px 0;border-top:1px solid var(--border-hairline);
+  font-family:var(--font-code);font-variant-numeric:tabular-nums;font-size:12.5px;cursor:pointer}
+.wrow:hover{background:var(--surface-raised)}
+.wrow.sel{background:var(--surface-inset)}
+.wrow.lev{padding-left:14px}
+.wrow b{min-width:46px;color:var(--text-heading);flex:none}
+.wrow .nm{color:var(--text-muted);font-family:var(--font-body);font-size:11px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1}
+/* 标签用「·」紧排，不留大间距，否则两个标签就把行撑爆 */
+.wrow .tp{font-size:10px;color:var(--text-muted);border:1px solid var(--border-hairline);border-radius:999px;
+  padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;
+  background:none;cursor:pointer}
+.wrow .px{margin-left:auto;min-width:52px;text-align:right;flex:none}
+.wrow .cg{min-width:48px;text-align:right;flex:none}
+.wrow .gr,.wrow .rm{display:none;border:0;background:none;padding:0;font-size:12px}
+.wrow .gr{color:var(--text-muted);cursor:grab}
+.wrow .rm{color:var(--down);cursor:pointer}
+#watch.edit .wrow .gr,#watch.edit .wrow .rm{display:inline-block}
+
+/* ══ 主栏 ══ 页面自己滚动，图表高度固定：展开订单表或明细表都不压缩 K 线 */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;padding:12px 20px 28px;gap:10px;
+  overflow-y:auto;overflow-x:hidden}
+/* 标题行 = 「这是什么」，第二行 = 「数字」。两行都定宽栏位，鼠标在图上滑动时不晃。 */
+.dtitle{display:flex;flex:none;align-items:center;gap:10px;min-height:30px}
+.fav{border:0;background:none;cursor:pointer;line-height:0;padding:2px;color:var(--text-muted);
+  transition:color .15s,transform .15s}
+.fav:hover{transform:scale(1.12)}
+.fav.on{color:var(--accent)}
+.dtitle .sym{font-family:var(--font-heading);font-size:20px;color:var(--text-heading);font-weight:600;
+  letter-spacing:-.01em;white-space:nowrap}
+.dtitle .nm{font-size:13px;color:var(--text-body);white-space:nowrap}
+.tgpill{border:1px solid var(--border-hairline);border-radius:999px;padding:2px 9px;font-size:11px;
+  color:var(--text-muted);white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
+.tgpill.ern .d{width:6px;height:6px;border-radius:50%;background:var(--z-a);flex:none}
+.tgpill.ern.hot{border-color:var(--z-a);color:var(--z-a);font-weight:600}
+.tgpill.lv{border-color:var(--lev);color:var(--lev);font-family:var(--font-code)}
+.dtitle .sep{color:var(--border-strong)}
+.rel{display:inline-flex;gap:6px;align-items:center;font-family:var(--font-code);font-size:12px;white-space:nowrap}
+.rel .lb{color:var(--text-muted);font-family:var(--font-body);font-size:11px}
+.rel a{font-weight:600;cursor:pointer}
+.dtitle .q{margin-left:auto;flex-shrink:1;min-width:120px;width:180px;border:1px solid var(--border-hairline);
+  background:var(--surface-raised);color:var(--text-body);border-radius:4px;padding:6px 10px;
+  font-family:var(--font-code);font-size:12px;outline:none;text-transform:uppercase}
+.dtitle .q:focus{border-color:var(--accent)}
+/* flex:none 是必须的：.main 是 column flex 且内容常常超高，默认 flex-shrink:1
+   会把这一行压扁；而下面的 overflow-x:auto 会让 CSS 把 overflow-y 从 visible
+   提升成 auto，于是压扁的结果不是溢出可见而是被裁掉（实测 clientHeight 只剩
+   10px、scrollHeight 48px，24px 的大字被拦腰切断）。同行的 .ordbar/.ordform/
+   .ordtab 是同一类隐患，一并固定。 */
+.dstat{display:flex;flex:none;align-items:baseline;font-family:var(--font-code);font-variant-numeric:tabular-nums;
+  font-size:13px;border-bottom:1px solid var(--border-hairline);padding-bottom:10px;
+  flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.dstat::-webkit-scrollbar{display:none}
+.dstat>span{white-space:nowrap;flex:none}
+.dstat .k{color:var(--text-muted);font-size:10px;font-family:var(--font-body)}
+.dstat .big{min-width:110px;font-size:24px;font-weight:600;color:var(--text-heading)}
+.dstat .chg{min-width:90px}
+.dstat .f1{min-width:110px}
+.dstat .f2{min-width:150px}
+.dstat .f3{min-width:150px}
+.dstat .asof{margin-left:auto;padding-left:16px;font-size:11px;color:var(--text-muted);font-family:var(--font-body)}
+
+/* 录单条：「记一笔 / 收起」固定 76×28，两个状态同宽，右边的持仓文字不会跳 */
+.ordbar{display:flex;flex:none;align-items:center;gap:12px;font-family:var(--font-code);font-size:12px}
+.tgl{width:76px;height:28px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border-strong);background:transparent;color:var(--text-body);border-radius:4px;
+  font-family:var(--font-body);font-size:12px;cursor:pointer;transition:all .2s;flex:none}
+.tgl.on{border-color:var(--border-hairline);background:var(--surface-raised)}
+.ordbar .psum{color:var(--text-body)}
+.ordbar .more{margin-left:auto;font-family:var(--font-body);cursor:pointer}
+.ordform{display:flex;flex:none;gap:10px;align-items:center;font-family:var(--font-code);font-size:12px;
+  border:1px solid var(--border-hairline);background:var(--surface-raised);border-radius:8px;padding:10px 12px}
+.ordform b{color:var(--text-heading)}
+.ordform input{border:1px solid var(--border-hairline);background:var(--surface-page);color:var(--text-body);
+  border-radius:4px;padding:6px 8px;font-family:var(--font-code);font-size:12px;outline:none}
+.ordform input:focus{border-color:var(--accent)}
+.ordform .idate{width:118px}.ordform .iqty{width:64px}.ordform .ipx{width:84px}
+/* 买入 / 卖出 就是「记录」这个动作本身，不再另设记录按钮 */
+.ordform .bs{height:28px;padding:0 16px;display:flex;align-items:center;border:0;border-radius:4px;
+  color:#fff;font-family:var(--font-body);font-size:12px;font-weight:500;cursor:pointer}
+.ordform .bs.buy{background:var(--up)}
+.ordform .bs.sell{background:var(--down)}
+.ordform .bs:hover{filter:brightness(1.08)}
+.ordform .oh{margin-left:auto;font-family:var(--font-body);font-size:11px;color:var(--text-muted)}
+.ordtab{flex:none;border:1px solid var(--border-hairline);border-radius:8px;padding:6px 12px;font-family:var(--font-code);
+  font-variant-numeric:tabular-nums;font-size:12px}
+.ordtab .th{display:flex;font-size:10px;color:var(--text-muted);padding:4px 0;
+  border-bottom:1px solid var(--border-strong);font-family:var(--font-body)}
+.ordtab .tr{display:flex;align-items:center;padding:6px 0;border-top:1px solid var(--border-hairline)}
+.ordtab .tr.closed{opacity:.55}
+.ordtab .o1{width:24px;font-weight:600;flex:none}
+.ordtab .o2{width:64px;color:var(--text-heading);font-weight:600;flex:none}
+.ordtab .o3{width:110px;flex:none}
+.ordtab .o4{width:60px;text-align:right;flex:none}
+.ordtab .o5{width:84px;text-align:right;flex:none}
+.ordtab .o6{width:100px;text-align:right;flex:none}
+.ordtab .o7{flex:1;text-align:right;min-width:0}
+.ordtab .o8{width:28px;text-align:right;flex:none}
+.ordtab .o8 button{border:0;background:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:0}
+.ordtab .o8 button:hover{color:var(--down)}
+.ordtab .tf{font-size:10.5px;color:var(--text-muted);padding:6px 0 2px;font-family:var(--font-body)}
+
+#tkhost{position:relative;flex:none}
+/* 记录表被搬到图外面，所以组件自带的那个按钮要藏掉；面板不再裁切覆盖层 */
+#tkhost .lyra-tkrecb{display:none}
+#tkhost .lyra-tkpane{overflow:visible}
+[data-lyra-theme="home"] #tkhost .lyra-zlab,
+[data-lyra-theme="home"] #tkhost .lyra-tkcard,
+[data-lyra-theme="home"] #tkhost .lyra-tkrange button.on{background:var(--surface-raised)}
+[data-lyra-theme="home"] #tkhost .lyra-tkpill .lyra-tkrb{background:var(--surface-inset)}
+.reclead{display:flex;align-items:center;gap:14px;font-size:12px;border-top:1px solid var(--border-hairline);
+  padding-top:10px;font-family:var(--font-code);flex-wrap:wrap}
+.reclead .t{font-family:var(--font-body);font-weight:600;color:var(--text-heading)}
+.reclead .lg{display:flex;gap:6px;align-items:center}
+.reclead .sw{width:9px;height:9px;border-radius:2px}
+.reclead .sw.g{background:var(--z-g-bg);border:1px solid var(--z-g)}
+.reclead .sw.b{background:var(--z-b-bg);border:1px solid var(--z-b)}
+.reclead .sw.a{background:var(--z-a-bg);border:1px solid var(--z-a)}
+.reclead .src{font-size:11px;color:var(--text-muted);font-family:var(--font-body)}
+.reclead .more{margin-left:auto;font-family:var(--font-body);cursor:pointer}
+#tkrec{border:1px solid var(--border-hairline);border-radius:8px;padding:4px 12px 10px}
+#tkrec .lyra-tkrecbody{display:block}
+.dfoot{height:40px;flex:none;display:flex;align-items:center;padding:0 24px;
+  border-top:1px solid var(--border-hairline);font-size:11px;color:var(--text-muted);background:var(--surface-page)}
+.dfoot .r{margin-left:auto;display:flex;gap:16px}
+.dfoot a{color:var(--text-muted)}
+/* 取数进度条 */
+#prog{padding:0 14px 8px}
+#prog .pb{height:4px;border-radius:3px;background:var(--border-hairline);overflow:hidden}
+#prog .pb i{display:block;height:100%;width:0;background:var(--accent);transition:width .18s linear}
+#prog .pt{display:block;margin-top:6px;font-size:11px;color:var(--text-muted);font-family:var(--font-code)}
+.load{color:var(--text-muted);font-size:12px;padding:14px}
+</style>
+</head>
+<body>
+<div class="dpage motion">
+
+<header class="dhead">
+  <a class="mark" href="/"><img src="/ds/assets/lyra-icon.svg" alt="">bide</a>
+  <nav>
+    <a href="https://note.example.com/">笔记</a>
+    <span class="cur">看板</span>
+  </nav>
+  <div class="right">
+    <div class="clock"><span class="zn">NEW YORK</span><span class="tm" id="nytm">--:--:--</span><span class="tz" id="nytz">ET</span><span class="dot" id="ssdot"></span><span class="ss" id="sslab">—</span></div>
+    <div class="clock"><span class="zn">BEIJING</span><span class="tm" id="bjtm">--:--:--</span><span class="tz">CST</span></div>
+    <div class="thsw" id="thsw"><button data-th="light" type="button">浅</button><button data-th="dark" type="button">深</button><button data-th="ivory" type="button">象牙</button></div>
+    <span data-lyra-auth></span>
+  </div>
+</header>
+
+<div class="dbody">
+  <nav class="rail">
+    <button class="rb on" data-tab="today" type="button"><span class="ic">◉</span>今日<span class="bdg"></span></button>
+    <button class="rb" data-tab="pos" type="button"><span class="ic">▤</span>持仓<span class="bdg"></span></button>
+    <button class="rb" data-tab="watch" type="button"><span class="ic">☆</span>关注<span class="bdg"></span></button>
+    <button class="fold" id="fold" type="button" title="收起 / 展开侧栏">⇤</button>
+  </nav>
+
+  <aside class="side" id="side">
+    <div class="sdrag" id="sdrag" title="拖动调整宽度 · 440px 起两列，660px 起三列"></div>
+    <div class="sbody" id="sbody">
+
+      <section class="pane on" id="today">
+        <div class="ptitle"><h2>今日关注</h2><span class="sub" id="tdcnt"></span><span class="rt" id="cstamp"></span></div>
+        <div id="prog" hidden><div class="pb"><i></i></div><span class="pt"></span></div>
+        <div class="fbar" id="fbar">
+          <button class="chip on" data-rf="all" type="button">全部</button>
+          <button class="chip" data-rf="unread" type="button">未读</button>
+          <button class="chip" data-rf="read" type="button">已读</button>
+          <button class="chip" id="tdflagb" type="button" title="只看加了星标的">★ 星标</button>
+          <span class="pxseg" id="pxseg" hidden><button data-px="close" type="button">收盘价</button><button data-px="live" type="button">实时</button></span>
+          <button class="chip tagpick" id="tdtagb" type="button">按标签 ▾</button>
+          <div class="pop" id="tdtagp" hidden style="right:14px;top:calc(100% - 2px);width:250px"></div>
+        </div>
+        <div class="body" id="tdbody"><p class="load">正在取数…</p></div>
+      </section>
+
+      <section class="pane" id="pos">
+        <div class="body">
+          <div class="ptitle" style="padding:0 0 8px"><h2>持仓</h2><span class="sub" id="poscnt"></span><span class="rt" id="bgst">Bitget 未连接</span></div>
+          <div id="posbody"><p class="load">加载中…</p></div>
+          <div class="slabel">BITGET · 账户
+            <button class="chip" id="bgrefresh" type="button" style="margin-left:8px;letter-spacing:0">刷新</button>
+            <a class="chip" id="bgsetup" href="/bg/setup" target="_blank" rel="noopener" style="letter-spacing:0;text-decoration:none">连接设置</a>
+          </div>
+          <p class="foot" id="bgvault" style="margin-top:6px">正在检查连接…</p>
+          <div id="bgout"></div>
+          <p class="foot">均价口径：看板移动加权 · 券商摊薄成本，两者可能不同。</p>
+        </div>
+      </section>
+
+      <section class="pane" id="watch">
+        <div class="body">
+          <div class="ptitle" style="padding:0 0 0"><h2>关注</h2><span class="sub" id="wcnt"></span><button class="chip" id="editb" type="button" style="margin-left:auto">编辑</button></div>
+          <div class="addr"><input id="add" placeholder="加代码，回车加入" spellcheck="false" autocapitalize="characters"></div>
+          <div class="sortr" id="sortr">
+            <span class="lb">排序</span>
+            <button class="sortb" id="sortb" type="button">添加时间 <span class="dir">↑</span></button>
+            <div class="pop" id="sortp" hidden style="left:34px;top:calc(100% + 4px);width:180px;padding:6px"></div>
+            <button class="mgr" id="tmgrb" type="button">管理标签</button>
+          </div>
+          <div class="tmgr" id="tmgr" hidden></div>
+          <div class="tchips" id="tchips"></div>
+          <div class="hint" id="thint"></div>
+          <div id="wbody" style="margin-top:10px"><p class="load">加载中…</p></div>
+          <div class="hint" id="sfoot"></div>
+        </div>
+      </section>
+
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="dtitle">
+      <button id="dflag" type="button" title="加星标（重点盯）">☆</button>
+      <button class="fav" id="fav" type="button" title="收藏" aria-label="收藏"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.3 4.4 12.6a4.6 4.6 0 0 1 0-6.5 4.4 4.4 0 0 1 6.3 0l1.3 1.3 1.3-1.3a4.4 4.4 0 0 1 6.3 0 4.6 4.6 0 0 1 0 6.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>
+      <span class="sym" id="dsym">—</span>
+      <span class="nm" id="dname"></span>
+      <span id="dtags" style="display:flex;gap:6px;align-items:center;min-width:0;overflow:hidden"></span>
+      <input class="q" id="q" placeholder="看别的代码…" spellcheck="false" autocapitalize="characters">
+    </div>
+    <div class="dstat" id="dstat"></div>
+    <div class="ordbar">
+      <button class="tgl" id="otog" type="button">记一笔</button>
+      <span class="psum" id="ordsum"></span>
+      <a class="more" id="ordmore"></a>
+    </div>
+    <div class="ordform" id="ordform" hidden></div>
+    <div class="ordtab" id="ordtab" hidden></div>
+    <div id="tkhost"></div>
+    <div class="reclead" id="reclead" hidden></div>
+    <div id="tkrec" hidden></div>
+  </main>
+</div>
+
+<footer class="dfoot"><span>© 2026 Lyra · example.org</span><span class="r"><a href="/rss.xml">RSS</a><a href="#" id="totop">回顶部</a></span></footer>
+</div>
+<script src="/static/zones.js"></script>
+<script src="/static/tickerchart.js"></script>
+<script src="/ds/shell.js"></script>
+<script>
+(function () {
+  'use strict';
+  var PUB = 'https://quant.bide.example.com/api/public/bars';
+  var SYMRE = /^\^?[A-Z][A-Z0-9.\-]{0,9}$/;
+  var syms = [], data = {};
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (t) { return String(t).replace(/[&<>"]/g, function (c) {
+    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); };
+  var f2 = function (v) { return (v == null || !isFinite(v)) ? '—' : v.toFixed(2); };
+  var pcs = function (v) { return (v == null || !isFinite(v)) ? '—' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; };
+  var cls = function (v) { return v == null || !isFinite(v) ? '' : (v >= 0 ? 'up' : 'dn'); };
+  var money = function (v) { return (v < 0 ? '-$' : '$') + Math.abs(v).toFixed(2); };
+  function todayStr() {
+    var d = new Date();
+    return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+  }
+
+  /* ══ 皮肤 ══
+     三套：light=data（白底蓝强调）、dark=home（深空）、ivory=essay（象牙宋体）。
+     六套皮肤里另外三套不进看板：tech 与 home 太像，tutorial/magazine 的字体不适合密集数字。 */
+  var THEMES = { light: 'data', dark: 'home', ivory: 'essay' };
+  /* 2026-09-06 默认改成象牙。键名换成 theme2：老键里存的是当年默认落下的 light，
+     分不清是用户选的还是默认，所以全员重置一次，之后再点的选择照常记住。 */
+  var theme = localStorage.getItem('lyra.dash.theme2') || 'ivory';
+  function applyTheme(t) {
+    if (!THEMES[t]) t = 'light';
+    theme = t;
+    document.documentElement.setAttribute('data-lyra-theme', THEMES[t]);
+    [].forEach.call($('thsw').children, function (b) {
+      b.classList.toggle('on', b.getAttribute('data-th') === t);
+    });
+    try { localStorage.setItem('lyra.dash.theme2', t); } catch (e) {}
+    // 图表的网格与蜡烛颜色是挂载时算的，换皮肤要重画一次
+    if (shown) mountChart(shown);
+  }
+  $('thsw').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-th]');
+    if (b) applyTheme(b.getAttribute('data-th'));
+  });
+
+  /* ══ 双时钟 ══
+     纽约时间带盘前 / 盘中 / 盘后 / 休市。时段按美东本地分钟数判定：
+     04:00–09:30 盘前、09:30–16:00 盘中、16:00–20:00 盘后，周末休市。
+     不含美股节假日——那需要一张交易日历，服务端还没有。 */
+  function tick() {
+    var now = new Date();
+    var hm = function (tz) { return now.toLocaleTimeString('en-GB',
+      { timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
+    $('nytm').textContent = hm('America/New_York');
+    $('bjtm').textContent = hm('Asia/Shanghai');
+    var ps = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour12: false,
+      weekday: 'short', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }).formatToParts(now);
+    var get = function (k) { var p = ps.find(function (x) { return x.type === k; }); return p ? p.value : ''; };
+    var wd = get('weekday'), mins = (+get('hour') % 24) * 60 + (+get('minute'));
+    $('nytz').textContent = get('timeZoneName');
+    var lab = '休市', col = 'var(--text-muted)', live = false;
+    if (wd !== 'Sat' && wd !== 'Sun') {
+      if (mins >= 240 && mins < 570) { lab = '盘前'; col = 'var(--z-a)'; }
+      else if (mins >= 570 && mins < 960) { lab = '盘中'; col = 'var(--up)'; live = true; }
+      else if (mins >= 960 && mins < 1200) { lab = '盘后'; col = 'var(--z-a)'; }
+    }
+    $('sslab').textContent = lab;
+    $('sslab').style.color = col;
+    var d = $('ssdot');
+    d.style.background = col;
+    d.classList.toggle('live', live);
+  }
+  setInterval(tick, 1000); tick();
+
+  /* ══ 图标栏与侧栏 ══ */
+  var tab = localStorage.getItem('lyra.dash.tab') || 'today', fadeTick = 0;
+  function setTab(t) {
+    tab = t;
+    try { localStorage.setItem('lyra.dash.tab', t); } catch (e) {}
+    [].forEach.call(document.querySelectorAll('.rb'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-tab') === t);
+    });
+    [].forEach.call(document.querySelectorAll('.pane'), function (p) {
+      p.classList.toggle('on', p.id === t);
+    });
+    // 收起状态下点栏目自动展开
+    if ($('side').classList.contains('hide')) foldSide(false);
+    var sb = $('sbody');            // 两个同名动画轮换，才能让连点两次也重播
+    fadeTick++;
+    sb.classList.remove('fa', 'fb');
+    void sb.offsetWidth;
+    sb.classList.add(fadeTick % 2 ? 'fa' : 'fb');
+    $('sbody').scrollTop = 0;
+  }
+  document.querySelector('.rail').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tab]');
+    if (b) setTab(b.getAttribute('data-tab'));
+  });
+  function foldSide(hide) {
+    $('side').classList.toggle('hide', hide);
+    $('fold').textContent = hide ? '⇥' : '⇤';
+    try { localStorage.setItem('lyra.dash.fold', hide ? '1' : ''); } catch (e) {}
+    try { window.dispatchEvent(new Event('resize')); } catch (e) {}
+  }
+  $('fold').addEventListener('click', function () {
+    foldSide(!$('side').classList.contains('hide'));
+  });
+
+  /* 侧栏宽度：260–760px，存本地。够宽就把今日关注切成 2 列 / 3 列。 */
+  var SIDE_MIN = 260, SIDE_MAX = 760, C2 = 440, C3 = 660;
+  function applyWidth(w) {
+    w = Math.max(SIDE_MIN, Math.min(SIDE_MAX, Math.round(w)));
+    var s = $('side');
+    s.style.width = w + 'px';
+    s.classList.toggle('c2', w >= C2 && w < C3);
+    s.classList.toggle('c3', w >= C3);
+    return w;
+  }
+  (function initSide() {
+    var w = parseInt(localStorage.getItem('lyra.dash.sidew') || '0', 10);
+    applyWidth(w >= SIDE_MIN ? w : 320);
+    if (localStorage.getItem('lyra.dash.fold')) foldSide(true);
+    if (window.innerWidth < 1200) foldSide(true);
+    $('sdrag').addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      var x0 = e.clientX, w0 = $('side').getBoundingClientRect().width, cur = w0;
+      var mv = function (ev) { cur = applyWidth(w0 + ev.clientX - x0); };
+      var up = function () {
+        document.removeEventListener('pointermove', mv);
+        document.removeEventListener('pointerup', up);
+        document.body.style.userSelect = '';
+        try { localStorage.setItem('lyra.dash.sidew', String(cur)); } catch (er) {}
+        try { window.dispatchEvent(new Event('resize')); } catch (er) {}
+      };
+      document.body.style.userSelect = 'none';
+      document.addEventListener('pointermove', mv);
+      document.addEventListener('pointerup', up);
+    });
+  })();
+  $('totop').addEventListener('click', function (e) {
+    e.preventDefault(); $('main').scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  /* ══ 取数 ══ 与原来一致：串行、按代码去重、localStorage 缓存 6 小时 ══ */
+  function save() {
+    return fetch('/api/watchlist', { method: 'PUT', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbols: syms }) })
+      .then(function (r) { return r.json(); });
+  }
+  var barsCache = {};
+  function bars(s) {
+    if (barsCache[s]) return barsCache[s];
+    barsCache[s] = fetch(PUB + '?symbol=' + encodeURIComponent(s) + '&years=3', { cache: 'no-cache' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { return (j && j.bars && j.bars.length) ? j.bars : null; })
+      .catch(function () { return null; });
+    return barsCache[s];
+  }
+  function under(s) {
+    return (window.LyraTicker && window.LyraTicker.underlyingOf) ? window.LyraTicker.underlyingOf(s) : null;
+  }
+  /* 杠杆 ETF 的价格用它自己的，区间与交叉一律按正股算 */
+  function fetchOne(s) {
+    var base = under(s);
+    return bars(s).then(function (own) {
+      return (base ? bars(base) : Promise.resolve(own)).then(function (sig) {
+        if (!own || !sig || !window.LyraTicker || !window.LyraTicker.analyze) { data[s] = null; return; }
+        var an = window.LyraTicker.analyze(sig);
+        if (base) {
+          var lastOwn = own[own.length - 1], prev = own[own.length - 2];
+          an.close = lastOwn[4];
+          an.chg = prev ? (lastOwn[4] / prev[4] - 1) * 100 : 0;
+          an.base = base;
+        }
+        data[s] = {
+          close: an.close, chg: an.chg, rsi: an.rsi, dist200: an.dist200, up200: an.up200,
+          zone: an.zone, edge: an.edge, todayCross: an.todayCross || [],
+          date: an.date, base: base || null, wait: waitOf(an), warm: an.warm || null
+        };
+      });
+    }).catch(function () { data[s] = null; });
+  }
+  /* v4：2026-09-06 强势区延续线从 70 改成 65（见 tickerchart.js 的 RSI_HOT），
+     区间与等待状态都要重算，老缓存作废 */
+  var CK = 'lyra.dash.v4', CTTL = 6 * 3600 * 1000, cacheAt = 0;
+  function lastJob() {
+    var now = Date.now(), d = new Date(now);
+    var t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 21, 30);
+    return t > now ? t - 86400000 : t;
+  }
+  function cacheLoad() {
+    try {
+      var c = JSON.parse(localStorage.getItem(CK) || 'null');
+      if (!c || !c.at || !c.data) return null;
+      if (Date.now() - c.at > CTTL || c.at < lastJob()) return null;
+      return c;
+    } catch (e) { return null; }
+  }
+  function cacheSave() {
+    try { localStorage.setItem(CK, JSON.stringify({ at: cacheAt || Date.now(), data: data })); } catch (e) {}
+  }
+  function cacheClear() { try { localStorage.removeItem(CK); } catch (e) {} }
+  function stamp() {
+    var el = $('cstamp');
+    if (!el) return;
+    if (!cacheAt) { el.innerHTML = ''; return; }
+    var d = new Date(cacheAt), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    el.innerHTML = '数据取于 ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ' · <a id="creload">重新取</a>';
+    $('creload').addEventListener('click', function (e) {
+      e.preventDefault();
+      cacheClear(); cacheAt = 0; barsCache = {};
+      /* 图表组件自己也缓存日线，重新取时一并清掉，否则图还是旧的 */
+      if (window.LyraTicker && window.LyraTicker.clearCache) window.LyraTicker.clearCache();
+      busy = true; paintToday();
+      serial(syms.slice()).then(function () { cacheAt = Date.now(); cacheSave(); stamp(); first(); });
+    });
+  }
+  /* 串行更新：服务器 2 核 2G，并发反而更慢，而且串行才给得出真实进度 */
+  var busy = false;
+  function prog(done, total, cur) {
+    var box = $('prog');
+    if (!box) return;
+    if (!total || done >= total) { box.hidden = true; return; }
+    box.hidden = false;
+    box.querySelector('i').style.width = Math.round(done / total * 100) + '%';
+    box.querySelector('.pt').textContent = '更新行情 ' + done + '/' + total + (cur ? '　' + cur : '');
+  }
+  function serial(list) {
+    var i = 0, n = list.length;
+    busy = true;
+    function step() {
+      if (i >= n) { busy = false; prog(n, n); repaintAll(); return Promise.resolve(); }
+      prog(i, n, list[i]);
+      return fetchOne(list[i]).then(function () { i++; repaintAll(); return step(); });
+    }
+    return step();
+  }
+
+  /* ══ 区间判定与档位 ══
+     唯一实现在 /zones.js（源文件 src/zones.cjs），本页、tickerchart.js 与 MCP 共用。
+     口径依据见 docs/handoff-design.md 第 3.1 节，要改去改 zones.cjs，别在这里加分支。 */
+  var LZ = window.LyraZones;
+  var waitOf = LZ.waitOf, notes = LZ.notes, rankOf = LZ.rankOf, tierOf = LZ.tierOf;
+  var CUTS = [[88, '88 以下 · 买入侧，越靠前越该买'], [60, '60 以下 · 价格已涨过当初的建仓区']];
+
+  /* ══ 标签与财报（服务端异步查，随 lyra-meta 事件到达）══ */
+  function metaApi() { return (window.LyraTicker && window.LyraTicker.meta) || null; }
+  function nameRec(s) { var M = metaApi(); return (M && M.recs && M.recs[s]) || null; }
+  function tagsFor(s) { var M = metaApi(); return (M && M.tagsOf) ? M.tagsOf(s) : []; }
+  function labelOf(s) {
+    return (window.LyraTicker && window.LyraTicker.labelOf) ? window.LyraTicker.labelOf(s) : '';
+  }
+  /* 一组 = 正股 + 挂在它名下的杠杆 ETF */
+  function groupOf(s) {
+    var base = under(s) || s, out = [base];
+    var add = function (x) { if (x !== base && (under(x) || x) === base && out.indexOf(x) < 0) out.push(x); };
+    Object.keys(orders).forEach(add);
+    syms.forEach(add);
+    return out;
+  }
+
+  /* ══ 实时价（Bitget 只读行情）══
+     口径必须说清楚：这个源固定滞后约 15 分钟，LV1 实时行情卡只在 Bitget APP
+     里生效、Open API 拿不到。所以「实时」只是相对「昨收」而言，卡片上会把
+     每只标的的实际陈旧度标出来，超过 30 分钟标成琥珀色。
+     默认停在收盘价：区间/RSI/均线那一整套判定都是按日线收盘算的，
+     盘中价只换显示，不参与任何判定，两者不要混。 */
+  /* ══ 星标 ══
+     用户自己挑的重点标的（他说只打算做 3~4 只）。杠杆 ETF 跟着正股走：
+     给 OKLO 加星，OKLL 也算加了——他盯的是标的不是某个代码。 */
+  var flags = {}, flagOnly = false;
+  /* isFlag：这一组是不是被盯上了（筛选用，杠杆跟随正股）
+     isMark：这个代码要不要画红底（显示用，只画正股，杠杆不画）
+     例外：持仓页用 isFlag，杠杆也标——那页要的是"我这笔是不是重点"，
+     而且行数少，不存在画太多红线的问题。 */
+  function isFlag(sym) { var u = under(sym); return !!(flags[sym] || (u && flags[u])); }
+  function isMark(sym) { return !under(sym) && !!flags[sym]; }
+  function flagKey(sym) { return under(sym) || sym; }
+  function saveFlags() {
+    return fetch('/api/flags', { method: 'PUT', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ symbols: Object.keys(flags).filter(function (k) { return flags[k]; }) }) })
+      .catch(function () {});
+  }
+  function toggleFlag(sym) {
+    var k = flagKey(sym);
+    if (flags[k]) delete flags[k]; else flags[k] = 1;
+    saveFlags(); repaintAll(); paintFlagBtn();
+  }
+  function paintFlagBtn() {
+    var b = $('dflag');
+    if (!b) return;
+    var on = shown && isFlag(shown);
+    b.classList.toggle('on', !!on);
+    b.textContent = on ? '★' : '☆';
+    b.title = on ? '取消星标' : '加星标（重点盯）';
+  }
+
+  var pxMode = localStorage.getItem('lyra.dash.px') === 'live' ? 'live' : 'close';
+  var live = {}, liveAt = 0, liveTimer = null, liveOk = true;
+  function liveFetch() {
+    if (!syms.length) return Promise.resolve();
+    return fetch('/api/bg/quote?syms=' + encodeURIComponent(syms.join(',')),
+                 { credentials: 'same-origin', cache: 'no-cache' })
+      .then(function (r) {
+        if (r.status === 403) { liveOk = false; throw new Error('403'); }
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      })
+      .then(function (j) { live = j.quotes || {}; liveAt = Date.now(); })
+      .catch(function () { /* 取不到就退回收盘价显示，不弹窗打断 */ });
+  }
+  /* 实时模式下每 60 秒刷一次：服务端本来就按 60 秒缓存，再快没有意义 */
+  function liveTick() {
+    if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
+    if (pxMode !== 'live') return;
+    liveTimer = setInterval(function () {
+      if (document.hidden) return;
+      liveFetch().then(function () { paintToday(); paintWatch(); });
+    }, 60000);
+  }
+  /* 卡片上的价格与涨跌幅：收盘价模式用日线，实时模式用 Bitget 报价。
+     实时那份取不到就静默回落到收盘价，不留空格。 */
+  function pxOf(s) {
+    var a = data[s];
+    if (pxMode === 'live') {
+      var q = live[s];
+      if (q && q.last != null && isFinite(q.chgPct)) {
+        return { v: q.last, c: q.chgPct, lv: true,
+                 sess: { pre: '盘前', post: '盘后', on: '夜盘', regular: '' }[q.session] || '',
+                 stale: q.ageSec != null && q.ageSec > 1800 };
+      }
+    }
+    return { v: a ? a.close : null, c: a ? a.chg : null, lv: false, sess: '', stale: false };
+  }
+  function pxHtml(s) {
+    var p = pxOf(s);
+    return '<span class="px' + (p.lv ? ' lv' : '') + '">' + (p.v == null ? '—' : f2(p.v)) +
+      (p.sess ? '<span class="sess' + (p.stale ? ' stale' : '') + '">' + p.sess + '</span>' : '') + '</span>' +
+      '<span class="cg ' + (p.c == null ? '' : cls(p.c)) + '">' + (p.c == null ? '' : pcs(p.c)) + '</span>';
+  }
+  function paintPxSeg() {
+    var box = $('pxseg');
+    if (!box) return;
+    box.hidden = !liveOk;
+    [].forEach.call(box.querySelectorAll('button'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-px') === pxMode);
+    });
+  }
+  function setPxMode(m) {
+    if (m === pxMode) return;
+    pxMode = m === 'live' ? 'live' : 'close';
+    try { localStorage.setItem('lyra.dash.px', pxMode); } catch (e) {}
+    paintPxSeg();
+    if (pxMode === 'live' && Date.now() - liveAt > 60000) {
+      liveFetch().then(function () { paintPxSeg(); paintToday(); paintWatch(); liveTick(); });
+    } else { paintToday(); paintWatch(); liveTick(); }
+  }
+
+  /* ══ 今日关注 ══ */
+  var reads = {}, readFilter = localStorage.getItem('lyra.dash.rf') || 'all', todayTags = {};
+  function saveReads() {
+    return fetch('/api/reads', { method: 'PUT', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reads: reads }) })
+      .catch(function () {});
+  }
+  function loadReads() {
+    return fetch('/api/reads', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : { reads: {} }; })
+      .then(function (j) { reads = j.reads || {}; })
+      .catch(function () {});
+  }
+  function todayGroups() {
+    var groups = {}, order = [];
+    syms.forEach(function (s) {
+      var g = under(s) || s;
+      if (!groups[g]) { groups[g] = []; order.push(g); }
+      groups[g].push(s);
+    });
+    var hot = [];
+    order.forEach(function (g) {
+      /* 「将要启动」（KDJ 中轴聚拢 + MACD 零轴上方多头）单独成一类：
+         它不是买点，只说明动能快起来了，所以不参与正常排序、统一沉到最下面。
+         近 5 个交易日内出现过就算数——当天才算的话大部分日子是空的。 */
+      var arr = groups[g].filter(function (s) {
+        var a = data[s]; return a && (a.zone || a.todayCross.length || a.wait);
+      });
+      var warmArr = groups[g].filter(function (s) {
+        var a = data[s]; return a && a.warm && a.warm.ago <= 5;
+      });
+      if (!arr.length && !warmArr.length) return;
+      var warmOnly = !arr.length;
+      if (warmOnly) arr = warmArr;
+      arr.sort(function (x, y) { return (under(x) ? 1 : 0) - (under(y) ? 1 : 0); });
+      var a0 = data[arr[0]], ns = notes(a0);
+      var wm = null;
+      groups[g].forEach(function (s) {
+        var a = data[s];
+        if (a && a.warm && a.warm.ago <= 5 && (!wm || a.warm.ago < wm.ago)) wm = a.warm;
+      });
+      hot.push({ g: g, arr: arr, r: rankOf(a0), notes: ns, zone: ns.length ? ns[0].z : 'zn',
+        tags: tagsFor(g), warm: wm, warmOnly: warmOnly });
+    });
+    hot.sort(function (m, n) {
+      if (m.warmOnly !== n.warmOnly) return m.warmOnly ? 1 : -1;   /* 只有「将要启动」的沉到最下面 */
+      return n.r - m.r;
+    });
+    return hot;
+  }
+  function cardHtml(x, tday) {
+    var isRead = reads[x.g] === tday;
+    var ring = (x.zone === 'zg' || x.zone === 'zb' || x.zone === 'za') ? ' ' + x.zone : '';
+
+    var sel = x.arr.indexOf(shown) >= 0 ? ' sel' : '';
+    var rows = x.arr.map(function (s, i) {
+      var a = data[s], lev = under(s);
+      return '<div class="cl"><b class="' + (isMark(s) ? 'fl' : '') + '" data-s="' + esc(s) + '">' + esc(s) + '</b>' +
+        (lev ? '<span class="lvp" data-s="' + esc(s) + '">' + esc(levLabel(s)) + '</span>' : '') +
+        pxHtml(s) +
+        (i ? '' : '<span class="dd">' + (a.dist200 == null ? '—' : pcs(a.dist200)) + '</span>') +
+        '</div>';
+    }).join('');
+    var head = x.notes[0] || { z: 'zn', label: '', body: '', sub: '' };
+    if (x.warmOnly) head = { z: 'zw', label: '将要启动',
+      body: 'KDJ 三线在 50 中轴聚拢、MACD 在零轴上方多头', sub: '' };
+    var tagLine = '<div class="tg"><span class="zt ' + head.z + '">' + esc(head.label) + '</span>' +
+      '<span class="tn">' + esc(x.tags.join(' · ')) + '</span></div>';
+    var body = (x.warmOnly ? [] : x.notes).map(function (n, i) {
+      return '<div class="nt">' + (i ? '<span class="zt ' + n.z + '">' + esc(n.label) + '</span> ' : '') +
+        (n.strong ? '<b>' + esc(n.body) + '</b>' : '<span class="muted">' + esc(n.body) + '</span>') +
+        (n.sub ? '<span class="sub">' + esc(n.sub) + '</span>' : '') + '</div>';
+    }).join('');
+    /* 已经因为别的理由上榜的组，把「将要启动」作为一行小注附在后面，
+       不额外占一张卡；只有它一个理由的，整张卡就是这个类别。 */
+    if (x.warm) {
+      body += '<div class="warmn">将要启动 · ' +
+        (x.warm.ago === 0 ? '今天' : x.warm.ago + ' 天前') + '（' + esc(x.warm.date) + '）' +
+        (x.warmOnly ? ' · 动能条件到位，不是买点' : '') + '</div>';
+    }
+    return '<div class="tcard' + ring + sel + (isRead ? ' read' : '') + '" data-card="' + esc(x.g) + '" data-s="' + esc(x.arr[0]) + '">' +
+      '<button class="rd" data-rd="' + esc(x.g) + '" type="button" title="标记已读 / 未读">' +
+      '<svg viewBox="0 0 24 24" width="10" height="10" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+      rows + tagLine + body + '</div>';
+  }
+  function paintToday() {
+    var hot = todayGroups(), tday = todayStr(), dirty = false;
+    // 今天有过买卖操作的组自动标已读
+    hot.forEach(function (x) {
+      if (reads[x.g] === tday) return;
+      var acted = x.arr.some(function (s) {
+        return groupOf(s).some(function (s2) {
+          return (orders[s2] || []).some(function (o) { return o.date === tday; });
+        });
+      });
+      if (acted) { reads[x.g] = tday; dirty = true; }
+    });
+    if (dirty) saveReads();
+
+    // 标签下拉：只列今天有卡片的标签，杠杆 ETF 按正股算
+    var tagCount = {};
+    hot.forEach(function (x) { x.tags.forEach(function (t) { tagCount[t] = (tagCount[t] || 0) + 1; }); });
+    var picked = Object.keys(todayTags).filter(function (k) { return todayTags[k] && tagCount[k]; });
+    var tb = $('tdtagb');
+    tb.textContent = picked.length ? '标签 · ' + picked.length + ' ▾' : '按标签 ▾';
+    tb.classList.toggle('solid', !!picked.length);
+    $('tdtagp').innerHTML = '<div class="ph"><span>按标签筛选 · 并集</span>' +
+      (picked.length ? '<a id="tdtagclr" style="margin-left:auto;letter-spacing:0;font-size:11px">清除</a>' : '') + '</div>' +
+      (Object.keys(tagCount).length
+        ? Object.keys(tagCount).sort(function (a, b) { return tagCount[b] - tagCount[a]; }).map(function (n) {
+            return '<div class="opt' + (todayTags[n] ? ' on' : '') + '" data-tdtag="' + esc(n) + '">' +
+              '<span class="box">' + (todayTags[n] ? '✓' : '') + '</span><span>' + esc(n) + '</span>' +
+              '<span class="k">' + tagCount[n] + ' 组</span></div>';
+          }).join('')
+        : '<div class="opt muted">今天还没有带标签的卡片</div>') +
+      '<div class="pf">只列今天有卡片的标签 · 杠杆 ETF 按正股算</div>';
+
+    var shownG = hot.filter(function (x) {
+      var rd = reads[x.g] === tday;
+      if (!(readFilter === 'all' || (readFilter === 'read' ? rd : !rd))) return false;
+      if (picked.length && !x.tags.some(function (t) { return todayTags[t]; })) return false;
+      if (flagOnly && !x.arr.some(isFlag)) return false;
+      return true;
+    });
+    var fb = $('tdflagb');
+    if (fb) fb.classList.toggle('solid', flagOnly);
+    [].forEach.call(document.querySelectorAll('[data-rf]'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-rf') === readFilter);
+    });
+    $('tdcnt').textContent = hot.length + ' 组 · ' +
+      hot.filter(function (x) { return reads[x.g] !== tday; }).length + ' 未读';
+    var badge = document.querySelector('.rb[data-tab="today"]');
+    if (badge) badge.classList.toggle('has', hot.some(function (x) { return reads[x.g] !== tday; }));
+
+    // 分档成框：同一档的卡片进同一个网格，两条分界线夹在档之间
+    var cuts = CUTS.map(function (c) { return c.slice(); });
+    var out = '', curT = null, open = false;
+    shownG.forEach(function (x, xi) {
+      var pre = '';
+      cuts.forEach(function (c) {
+        if (c && x.r < c[0]) {
+          if (xi > 0) { pre += (open ? '</div>' : '') + '<div class="cut"><i></i>' + esc(c[1]) + '<i></i></div>'; open = false; curT = null; }
+          c[0] = -1;
+        }
+      });
+      var t = tierOf(x.r);
+      if (t !== curT) {
+        if (open && !pre) out += '</div>';
+        var zb = x.zone === 'zg' ? 'var(--z-g)' : x.zone === 'zb' ? 'var(--z-b)'
+               : x.zone === 'za' ? 'var(--z-a)' : 'var(--border-strong)';
+        out += pre + '<div class="tierh"><span class="bar" style="background:' + zb + '"></span>' +
+          '<span class="nm">' + esc(t) + '</span><span class="sc">' + x.r + '</span></div><div class="cards">';
+        curT = t; open = true;
+      } else { out += pre; }
+      out += cardHtml(x, tday);
+    });
+    if (open) out += '</div>';
+    $('tdbody').innerHTML = shownG.length ? out
+      : (busy ? '<p class="load">正在更新…</p>'
+        : '<p class="pempty">' + (hot.length ? '这个筛选下今天没有卡片。'
+          : '关注的标的今天没有区间状态、交叉信号，也没有在等强势区。') + '</p>');
+  }
+
+  /* ══ 订单与持仓 ══
+     只手动录入。均价用移动加权平均：卖出按当时均价扣减成本，剩下那部分均价不变，
+     卖掉的差价计进已实现盈亏。 */
+  var shown = null, orders = {}, posOpen = {};
+  function levLabel(s) {
+    var r = nameRec(s) || {}, m = /([0-9.]+)\s*倍/.exec(r.lev || '');
+    var mult = m ? m[1] + 'x' : '杠杆';
+    var dir = /做空|反向|short/i.test(r.lev || '') ? ' 做空'
+            : /做多|long/i.test(r.lev || '') ? ' 做多' : '';
+    return mult + dir;
+  }
+  function ordSort(l) {
+    return (l || []).slice().sort(function (a, b) {
+      return a.date < b.date ? -1 : a.date > b.date ? 1 : (a.at || 0) - (b.at || 0);
+    });
+  }
+  function posOf(list) {
+    var qty = 0, cost = 0, real = 0;
+    ordSort(list).forEach(function (o) {
+      var q = +o.qty, pr = +o.price;
+      if (o.side === 'sell') {
+        var avg = qty > 0 ? cost / qty : 0, n = Math.min(q, qty);
+        real += (pr - avg) * n; qty -= n; cost -= avg * n;
+        if (qty < 1e-9) { qty = 0; cost = 0; }
+      } else { qty += q; cost += q * pr; }
+    });
+    return { qty: qty, cost: cost, avg: qty > 0 ? cost / qty : null, real: real };
+  }
+  function regroup(list) {
+    orders = {};
+    (list || []).forEach(function (o) { (orders[o.sym] = orders[o.sym] || []).push(o); });
+    if (window.LyraTicker && window.LyraTicker.setOrders) window.LyraTicker.setOrders(orders);
+  }
+  function loadOrd() {
+    return fetch('/api/orders', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : { orders: [] }; })
+      .then(function (j) { regroup(j.orders); return orders; })
+      .catch(function () { return orders; });
+  }
+  function paintPos() {
+    var held = [], done = [], tv = 0, tc = 0, tr = 0;
+    Object.keys(orders).forEach(function (s) {
+      var pp = posOf(orders[s]);
+      tr += pp.real;
+      if (pp.qty > 0) { var a = data[s]; held.push({ s: s, p: pp, px: a ? a.close : null }); }
+      else if ((orders[s] || []).length) done.push({ s: s, p: pp });
+    });
+    held.sort(function (x, y) { return (y.px ? y.px * y.p.qty : 0) - (x.px ? x.px * x.p.qty : 0); });
+    var h = '';
+    if (!held.length) h += '<p class="pempty">还没有持仓。选一个标的，在图上方「记一笔」。</p>';
+    else {
+      h += '<div class="pcols"><span class="c1">代码</span><span class="c2">股数</span>' +
+        '<span class="c3">均价</span><span class="c4">浮盈亏</span><span class="c5">券商</span></div>';
+      held.forEach(function (x) {
+        var mv = x.px ? x.px * x.p.qty : null, pl = mv == null ? null : mv - x.p.cost;
+        var pct = (pl != null && x.p.cost > 0) ? pl / x.p.cost * 100 : null;
+        if (mv != null) { tv += mv; tc += x.p.cost; }
+        var bk = bgQty[x.s];
+        var okq = bk == null ? null : Math.abs(bk - x.p.qty) < 1e-6;
+        h += '<div class="prow" data-prow="' + esc(x.s) + '"><b class="c1' + (isFlag(x.s) ? ' fl' : '') + '">' + esc(x.s) + '</b>' +
+          '<span class="c2">' + x.p.qty + '</span>' +
+          '<span class="c3">' + x.p.avg.toFixed(2) + '</span>' +
+          '<span class="c4 ' + (pl == null ? '' : cls(pl)) + '">' +
+            (pl == null ? '取价中…' : pcs(pct) + '　' + (pl >= 0 ? '+' : '') + money(pl)) + '</span>' +
+          '<span class="c5 ' + (okq === null ? 'muted' : okq ? 'up' : 'dn') + '">' +
+            (bk == null ? '—' : bk + (okq ? ' ✓' : ' ≠')) + '</span></div>';
+        if (posOpen[x.s]) {
+          h += '<div class="pords">' + ordSort(orders[x.s]).map(function (o) {
+            return '<div class="o"><span class="sd ' + (o.side === 'buy' ? 'up' : 'dn') + '">' +
+              (o.side === 'buy' ? 'B' : 'S') + '</span><span>' + esc(o.date) + '</span>' +
+              '<span>' + o.qty + ' 股</span><span class="pr">' + (+o.price).toFixed(2) + '</span></div>';
+          }).join('') + '</div>';
+        }
+      });
+      var t = tv - tc;
+      h += '<div class="ptot"><span class="k">总浮盈亏</span><span class="v ' + cls(t) + '">' +
+        (t >= 0 ? '+' : '') + money(t) + (tc > 0 ? ' · ' + pcs(t / tc * 100) : '') + '</span></div>';
+    }
+    if (done.length || Math.abs(tr) > 1e-9) {
+      h += '<div class="pdone"><span class="k">已了结 ' + done.length + ' 只</span>' +
+        '<span class="v ' + cls(tr) + '">实现 ' + (tr >= 0 ? '+' : '') + money(tr) + '</span></div>';
+    }
+    h += bgMismatchHtml();
+    $('posbody').innerHTML = h;
+    $('poscnt').textContent = held.length + ' 只' + (tv ? ' · 市值 ' + money(tv) : '');
+    var badge = document.querySelector('.rb[data-tab="pos"]');
+    if (badge) badge.classList.toggle('has', Object.keys(bgDiff).length > 0);
+  }
+
+  /* ══ Bitget（只读对账）══
+     passphrase 只放在这个闭包变量里，随请求发一次就完事，页面刷新即消失。 */
+  var bgData = {}, bgQty = {}, bgCost = {}, bgDiff = {}, bgSynced = [];
+  function bgProbe(path, query) {
+    return fetch('/api/bg/probe', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      /* 不带 passphrase：服务端会去 /data/bg/vault.json 里取加密保存的那份。
+         密码只在 /bg/setup 页面填一次，这里不再要求用户每次重输。 */
+      body: JSON.stringify({ path: path, query: query || {}, save: true }),
+    }).then(function (r) { return r.json(); });
+  }
+  /* 券商成本是「摊薄成本」：卖出盈亏直接冲抵剩余持仓成本；看板用移动加权平均。
+     核对时把手录的换算成摊薄口径再比，否则满屏都是假差异。 */
+  function bgDiluted(p) { return (p.qty > 0) ? (p.cost - p.real) / p.qty : null; }
+  function bgScan() {
+    var d = (bgData['asset/stock-position'] || {}).data;
+    bgQty = {}; bgCost = {}; bgDiff = {};
+    if (!d || !d.channels || !d.channels[0]) return;
+    (d.channels[0].positions || []).forEach(function (p) {
+      var s = String(p.symbol).replace(/\.US$/, '');
+      bgQty[s] = p.quantity; bgCost[s] = p.costPrice;
+      var mine = orders[s] ? posOf(orders[s]) : null;
+      var mq = mine ? mine.qty : 0;
+      if (Math.abs(p.quantity - mq) > 1e-6) bgDiff[s] = { broker: p.quantity, mine: mq, px: p.costPrice };
+    });
+    Object.keys(orders).forEach(function (s) {
+      if (bgQty[s] != null) return;
+      var p = posOf(orders[s]);
+      if (p.qty > 1e-9) { bgQty[s] = 0; bgDiff[s] = { broker: 0, mine: p.qty, px: null }; }
+    });
+  }
+  /* 差额一键同步：按券商数量补一笔（或减一笔），价格用券商的摊薄成本。
+     这是真写进订单库的一条记录，所以留一个「撤销」把它删掉。 */
+  function bgMismatchHtml() {
+    var ks = Object.keys(bgDiff);
+    var h = '';
+    if (bgSynced.length) {
+      h += '<div class="note ok"><span>已同步 ' + bgSynced.length + ' 笔，看板与券商一致</span>' +
+        '<a id="bgundo" style="margin-left:auto;cursor:pointer">撤销</a></div>';
+    }
+    ks.forEach(function (s) {
+      var d = bgDiff[s];
+      h += '<div class="note warn"><div class="r1"><b>' + esc(s) + '</b>' +
+        '<span>券商 ' + d.broker + ' 股 · 看板 ' + d.mine + ' 股</span></div>' +
+        '<div class="r2"><button class="chip solid" data-bgsync="' + esc(s) + '" type="button">同步为券商数量</button>' +
+        '<span class="muted" style="font-size:10.5px">' +
+        (d.px == null ? '按当前价补一笔' : '按券商摊薄成本 ' + (+d.px).toFixed(2) + ' 补一笔') + '</span></div></div>';
+    });
+    return h;
+  }
+  function bgSync(s) {
+    var d = bgDiff[s];
+    if (!d) return;
+    var delta = d.broker - d.mine;
+    var px = d.px != null ? d.px : (data[s] ? data[s].close : null);
+    if (!px || !delta) return;
+    fetch('/api/orders', { method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sym: s, side: delta > 0 ? 'buy' : 'sell', date: nyToday(),
+        qty: Math.abs(delta), price: +(+px).toFixed(4), note: '券商同步' }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.order) return;
+        bgSynced.push(j.order.id);
+        regroup(j.orders); bgScan(); paintPos(); paintOrdbar(); paintOrdTab();
+        if (shown) mountChart(shown);
+      });
+  }
+  function bgUndo() {
+    var ids = bgSynced.slice();
+    bgSynced = [];
+    var step = function (i) {
+      if (i >= ids.length) {
+        return loadOrd().then(function () {
+          bgScan(); paintPos(); paintOrdbar(); paintOrdTab();
+          if (shown) mountChart(shown);
+        });
+      }
+      return fetch('/api/orders/' + encodeURIComponent(ids[i]), { method: 'DELETE', credentials: 'same-origin' })
+        .then(function () { return step(i + 1); }).catch(function () { return step(i + 1); });
+    };
+    step(0);
+  }
+  function bgPaintAccount() {
+    var d = (bgData['asset/account'] || {}).data, h = '';
+    if (d && d.list && d.list[0]) {
+      var a = d.list[0], c = (a.cashInfos && a.cashInfos[0]) || {};
+      var cells = [['净资产', a.netAssets], ['购买力', a.buyPower],
+        ['可用现金', c.availableCash != null ? c.availableCash : a.totalCash],
+        ['维持保证金', a.maintenanceMargin]];
+      h += '<div class="agrid">' + cells.map(function (x) {
+        return '<div class="acell"><div class="k">' + x[0] + '</div><div class="v">' +
+          (x[1] == null ? '—' : money(+x[1])) + '</div></div>';
+      }).join('') + '</div>';
+    }
+    var od = (bgData['trade/today-orders'] || {}).data;
+    var open = (od && od.orders ? od.orders : []).filter(function (o) {
+      return o.status === 'New' || o.status === 'PartialFilled' || o.status === 'WaitToNew';
+    });
+    if (open.length) {
+      h += '<div class="slabel">今日挂单 · ' + open.length + '</div>' + open.map(function (o) {
+        var s = String(o.symbol).replace(/\.US$/, '');
+        return '<div class="orow"><span class="' + (o.side === 'Buy' ? 'up' : 'dn') + '" style="font-weight:600">' +
+          (o.side === 'Buy' ? 'B' : 'S') + '</span><b>' + esc(s) + '</b>' +
+          '<span class="lab">' + (o.orderType === 'Market' ? '市价' : '限价') + '</span>' +
+          '<span class="qty">' + o.quantity + ' × ' + o.price + '</span>' +
+          '<span class="lab">等待</span></div>';
+      }).join('');
+    }
+    $('bgout').innerHTML = h;
+  }
+  var bgBusy = false;
+  function bgConnect() {
+    var out = $('bgout');
+    if (bgBusy) return;
+    bgBusy = true;
+    $('bgrefresh').disabled = true;
+    out.innerHTML = '<p class="load">正在读取…</p>';
+    var since = Math.floor(Date.now() / 1000) - 90 * 86400;
+    var jobs = [['asset/account', null], ['asset/stock-position', null], ['trade/today-orders', null],
+      ['trade/history-orders', { startAt: since }], ['trade/history-executions', { startAt: since }]];
+    var i = 0, errs = [];
+    (function next() {
+      if (i >= jobs.length) {
+        bgBusy = false; $('bgrefresh').disabled = false;
+        $('bgst').innerHTML = errs.length ? '<span class="bgerr">Bitget 部分失败</span>'
+          : '<span class="bgok">● Bitget 已连接</span>';
+        bgScan(); bgPaintAccount(); paintPos();
+        if (errs.length) $('bgout').innerHTML += '<p class="bgerr">' + esc(errs.join('；')) + '</p>';
+        $('bgout').innerHTML += '<p class="foot">读取于 ' +
+          new Date().toLocaleTimeString('zh-CN', { hour12: false }) + '</p>';
+        return;
+      }
+      var j = jobs[i++];
+      bgProbe('/api/v3/stockplus/' + j[0], j[1]).then(function (res) {
+        var b = res && res.body;
+        if (res && res.status === 200 && b && b.code === '00000') bgData[j[0]] = b;
+        else errs.push(j[0] + '：' + ((b && b.msg) || ('HTTP ' + (res && res.status))));
+        next();
+      }).catch(function (e) { errs.push(j[0] + '：' + e); next(); });
+    })();
+  }
+  $('bgrefresh').addEventListener('click', bgConnect);
+  /* 保险箱里存过 passphrase 就算已连接，进页面直接拉一次，不用再点「连接」。
+     没存过就指路 /bg/setup；非管理员看不到这块（探测会 403）。 */
+  function bgVaultCheck() {
+    fetch('/api/bg/vault', { credentials: 'same-origin' })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (j) {
+        var ro = j.slots && j.slots.ro, td = j.slots && j.slots.trade;
+        /* 交易 passphrase 12 小时到期，这里把剩余时间显示出来；只读的不设期限 */
+        var tdTxt = '';
+        if (td && td.saved && !td.expired && td.leftMin != null) {
+          tdTxt = ' · 交易 passphrase 还剩 ' +
+            (Math.floor(td.leftMin / 60) ? Math.floor(td.leftMin / 60) + ' 小时 ' : '') +
+            (td.leftMin % 60) + ' 分钟';
+        } else if (td && td.saved) {
+          tdTxt = ' · <span class="bgerr">交易 passphrase 已过期</span>，下单前要重输';
+        } else {
+          tdTxt = ' · 交易 passphrase 未保存（下单时才需要）';
+        }
+        if (ro && ro.saved && ro.readable) {
+          $('bgvault').innerHTML = '已保存只读 passphrase（' +
+            new Date(ro.at).toLocaleDateString('zh-CN') + '）· 行情与持仓直接读取' + tdTxt;
+          bgConnect();
+        } else if (ro && ro.saved) {
+          $('bgvault').innerHTML = '<span class="bgerr">保险箱里的 passphrase 解不开</span>（BG_VAULT_SECRET 变过），去「连接设置」重存一次';
+          $('bgst').innerHTML = '<span class="bgerr">Bitget 未连接</span>';
+        } else {
+          $('bgvault').innerHTML = '还没存 passphrase，点「连接设置」填一次，之后就不用再输';
+          $('bgst').textContent = 'Bitget 未连接';
+        }
+      })
+      .catch(function () {
+        var sl = $('bgsetup'), rf = $('bgrefresh'), vv = $('bgvault');
+        if (sl) sl.style.display = 'none';
+        if (rf) rf.style.display = 'none';
+        if (vv) vv.textContent = 'Bitget 账户只有管理员可见';
+        $('bgst').textContent = '';
+      });
+  }
+  bgVaultCheck();
+
+  /* ══ 关注 ══ 排序：添加时间（默认）/ 标签 / 涨幅 / 代码，再点同一项切升降序。
+     杠杆 ETF 永远紧跟它的正股，不参与排序。 */
+  var tagPick = {}, sortKey = localStorage.getItem('lyra.dash.sk') || 'added';
+  var sortAsc = localStorage.getItem('lyra.dash.sd') !== '0';
+  var SORTS = {
+    added: { label: '添加时间', hint: '默认', key: function (g, i) { return i; } },
+    tag: { label: '标签', hint: '按首个标签分组', key: function (g) { return tagsFor(g)[0] || '￿'; } },
+    chg: { label: '涨幅', hint: '当日', key: function (g) { var a = data[g]; return a && isFinite(a.chg) ? a.chg : -Infinity; } },
+    sym: { label: '代码', hint: 'A → Z', key: function (g) { return g; } }
+  };
+  function watchGroups() {
+    var groups = {}, order = [];
+    syms.forEach(function (s) {
+      var g = under(s) || s;
+      if (!groups[g]) { groups[g] = []; order.push(g); }
+      if (under(s)) groups[g].push(s);
+    });
+    return order.map(function (g, i) { return { g: g, levs: groups[g].slice().sort(), added: i }; });
+  }
+  function paintWatch() {
+    var gs = watchGroups();
+    // 标签胶囊：多选取并集，杠杆跟随正股
+    var seen = {};
+    gs.forEach(function (x) { tagsFor(x.g).forEach(function (t) { seen[t] = (seen[t] || 0) + 1; }); });
+    var ks = Object.keys(seen).sort(function (a, b) { return seen[b] - seen[a]; });
+    $('tchips').innerHTML = ks.map(function (t) {
+      return '<button class="chip' + (tagPick[t] ? ' solid' : '') + '" data-tg="' + esc(t) + '" type="button">' +
+        esc(t) + ' <span style="opacity:.6">' + seen[t] + '</span></button>';
+    }).join('');
+    var picked = Object.keys(tagPick).filter(function (k) { return tagPick[k]; });
+    var vis = gs.filter(function (x) {
+      return !picked.length || tagsFor(x.g).some(function (t) { return tagPick[t]; });
+    });
+    $('thint').textContent = picked.length
+      ? '取并集 · 选中 ' + picked.length + ' 个标签 → ' + vis.length + ' 组'
+      : '点标签筛选，多选取并集 · 杠杆 ETF 跟随正股';
+
+    var sk = SORTS[sortKey] || SORTS.added;
+    vis = vis.slice().sort(function (a, b) {
+      var x = sk.key(a.g, a.added), y = sk.key(b.g, b.added);
+      var r = x < y ? -1 : x > y ? 1 : 0;
+      return sortAsc ? r : -r;
+    });
+    $('sortb').innerHTML = esc(sk.label) + ' <span class="dir">' + (sortAsc ? '↑' : '↓') + '</span>';
+    $('sortp').innerHTML = Object.keys(SORTS).map(function (k) {
+      return '<div class="srow' + (sortKey === k ? ' on' : '') + '" data-sk="' + k + '">' +
+        '<span>' + SORTS[k].label + '</span><span class="h">' + SORTS[k].hint + '</span></div>';
+    }).join('') + '<div class="pf">再点一次同一项切换升降序</div>';
+    $('sfoot').textContent = sortKey === 'added'
+      ? '按添加时间 · 最早在前 · 杠杆 ETF 紧跟正股'
+      : '按' + sk.label + (sortAsc ? ' 升序' : ' 降序') + ' · 杠杆 ETF 紧跟正股';
+
+    var h = '', lastHead = null;
+    vis.forEach(function (x) {
+      if (sortKey === 'tag') {
+        var gh = tagsFor(x.g)[0] || '未打标签';
+        if (gh !== lastHead) { h += '<div class="ghead">' + esc(gh) + '</div>'; lastHead = gh; }
+      }
+      [x.g].concat(x.levs).forEach(function (s, i) {
+        var a = data[s], ts = tagsFor(x.g);
+        h += '<div class="wrow' + (i ? ' lev' : '') + (shown === s ? ' sel' : '') + '" data-s="' + esc(s) + '">' +
+          '<button class="gr" type="button" title="拖动排序">⋮⋮</button>' +
+          '<b class="' + (isMark(s) ? 'fl' : '') + '">' + esc(s) + '</b>' +
+          '<span class="nm">' + esc(i ? '' : labelOf(s)) + '</span>' +
+          (i ? '<span class="lvp">' + esc(levLabel(s)) + '</span>' : '') +
+          (i ? '' : '<button class="tp" data-wtag="' + esc(s) + '" type="button" title="' +
+            (ts.length ? '按这些标签筛选' : '去管理标签') + '">' +
+            esc(ts.length ? ts.join('·') : '未打标签') + '</button>') +
+          pxHtml(s) +
+          '<button class="rm" data-del="' + esc(s) + '" type="button" title="移出关注">×</button></div>';
+      });
+    });
+    $('wbody').innerHTML = syms.length
+      ? (vis.length ? h : '<p class="pempty">没有带这些标签的标的。</p>')
+      : '<p class="pempty">还没有关注任何标的。上面输入代码加入。</p>';
+    $('wcnt').textContent = syms.length + ' 只';
+    if (!$('tmgr').hidden) paintTagMgr();
+  }
+  /* 标签管理：改名 / 合并 / 删除 / 新增，全部落到 PUT /api/market/tags。
+     新增的标签打在当前选中的标的上——标签本身没有独立实体，不挂在任何标的上就不存在。 */
+  function allTagged() {
+    var m = {};
+    syms.forEach(function (s) { if (!under(s)) m[s] = tagsFor(s).slice(); });
+    Object.keys(orders).forEach(function (s) { if (!under(s) && !m[s]) m[s] = tagsFor(s).slice(); });
+    return m;
+  }
+  function putTags(map) {
+    return fetch('/api/market/tags', { method: 'PUT', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tags: map }) })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j) { $('thint').textContent = '标签没改成（需要管理员权限）'; return; }
+        var M = metaApi();
+        if (M && M.apply) M.apply({ tags: j.tags });
+        else if (M && M.tags) Object.keys(j.tags).forEach(function (k) { M.tags[k] = j.tags[k]; });
+        paintWatch(); paintToday(); paintTags();
+      })
+      .catch(function () { $('thint').textContent = '标签没改成'; });
+  }
+  function editTag(from, to) {
+    var all = allTagged(), out = {};
+    Object.keys(all).forEach(function (s) {
+      var ts = all[s], i = ts.indexOf(from);
+      if (i < 0) return;
+      var next = ts.slice();
+      next.splice(i, 1);
+      if (to && next.indexOf(to) < 0) next.splice(i, 0, to);
+      out[s] = next;
+    });
+    if (Object.keys(out).length) putTags(out);
+  }
+  function paintTagMgr() {
+    var all = allTagged(), cnt = {};
+    Object.keys(all).forEach(function (s) { all[s].forEach(function (t) { cnt[t] = (cnt[t] || 0) + 1; }); });
+    var ks = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; });
+    $('tmgr').innerHTML = ks.map(function (t) {
+      return '<div class="tr" data-tag="' + esc(t) + '"><input value="' + esc(t) + '" data-ren="' + esc(t) + '">' +
+        '<span class="k">' + cnt[t] + '</span>' +
+        '<button class="mg" data-merge="' + esc(t) + '" type="button" title="把这个标签下的标的并入另一个标签，然后删除它">合并</button>' +
+        '<button class="del" data-dtag="' + esc(t) + '" type="button" title="删除标签">×</button></div>';
+    }).join('') +
+      '<div class="newr"><input id="newtag" placeholder="新标签名，回车打在当前标的上"></div>' +
+      '<p class="foot">改名即时生效；「合并」把该标签的标的并到另一个标签后删掉它；删除后标的变为「未打标签」。</p>';
+  }
+
+  /* ══ 主栏 ══ */
+  function nyToday() {
+    return new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/New_York' }).format(new Date());
+  }
+  function paintFav() {
+    var f = $('fav');
+    if (!shown) { f.style.visibility = 'hidden'; return; }
+    f.style.visibility = '';
+    var on = syms.indexOf(shown) >= 0;
+    var p = f.querySelector('path');
+    if (p) p.setAttribute('fill', on ? 'currentColor' : 'none');
+    f.classList.toggle('on', on);
+    f.title = on ? '取消收藏' : '收藏';
+    paintFlagBtn();
+  }
+  function earnPill(e) {
+    var t = todayStr();
+    var days = Math.round((new Date(e.date + 'T00:00:00Z') - new Date(t + 'T00:00:00Z')) / 864e5);
+    var rel = days === 0 ? '今天' : (days > 0 ? days + ' 天后' : Math.abs(days) + ' 天前');
+    var w = /amc|盘后/i.test(e.when || '') ? ' 盘后' : (/bmo|盘前/i.test(e.when || '') ? ' 盘前' : '');
+    return '<span class="tgpill ern' + (days === 0 ? ' hot' : '') + '" title="' +
+      (e.confirmed ? '公司已确认' : '机构预估') + (e.src ? ' · ' + esc(e.src) : '') + '">' +
+      '<span class="d"></span>财报 ' + e.date.slice(5).replace('-', '.') + w + ' · ' + rel +
+      (e.confirmed ? '' : ' · 预估') + '</span>';
+  }
+  /* 第一行 = 是什么：名称、主题标签、杠杆倍数与方向、财报、正股↔杠杆互跳。
+     杠杆 ETF 的标签、财报全部随正股显示，不再单独写「标签随正股」那种解释。 */
+  function paintTags() {
+    if (!shown) { $('dtags').innerHTML = ''; $('dname').textContent = ''; return; }
+    var M = metaApi(), nm = nameRec(shown) || {}, base = under(shown), out = [];
+    // 杠杆 ETF 的 labelOf 是「2倍做多VRT」，和后面的倍数胶囊、正股链接完全重复，所以不写
+    $('dname').textContent = base ? '' : (labelOf(shown) || '');
+    if (nm.kind === 'index') out.push('<span class="tgpill">指数</span>');
+    else {
+      tagsFor(shown).forEach(function (t) { out.push('<span class="tgpill">' + esc(t) + '</span>'); });
+      if (base) out.push('<span class="tgpill lv">' + esc(levLabel(shown)) + '</span>');
+      var e = (M && M.earningsOf) ? M.earningsOf(shown) : null;
+      if (e) out.push(earnPill(e));
+    }
+    // 互跳：杠杆页给出正股，正股页给出它的杠杆
+    var rel = null;
+    if (base) rel = { lb: '正股', s: base };
+    else {
+      var lv = syms.concat(Object.keys(orders)).filter(function (x) { return under(x) === shown; });
+      if (lv.length) rel = { lb: '杠杆', s: lv[0] };
+    }
+    if (rel) {
+      out.push('<span class="sep">|</span><span class="rel"><span class="lb">' + rel.lb + '</span>' +
+        '<a data-s="' + esc(rel.s) + '">' + esc(rel.s) + '</a>' +
+        (under(rel.s) ? '<span class="tgpill lv">' + esc(levLabel(rel.s)) + '</span>' : '') +
+        '<span class="lb">' + esc(under(rel.s) ? '' : (labelOf(rel.s) || '')) + '</span></span>');
+    }
+    $('dtags').innerHTML = out.join('');
+  }
+  function paintStat() {
+    var a = shown ? data[shown] : null;
+    if (!a) { $('dstat').innerHTML = '<span class="muted">—</span>'; return; }
+    var src = under(shown) ? ' 正股' : '';
+    var zc = { a: 'var(--z-a)', g: 'var(--z-g)', b: 'var(--z-b)' };
+    var zn = { a: '强势区', g: '超卖区', b: '建仓区' };
+    var zone = a.zone ? zn[a.zone.kind] + ' · 第 ' + a.zone.days + ' 天'
+      : (a.wait ? '等待强势区第 ' + a.wait.days + ' 天' : '区间外');
+    $('dstat').innerHTML =
+      '<span class="big">' + f2(a.close) + '</span>' +
+      '<span class="chg ' + cls(a.chg) + '">' + (a.chg >= 0 ? '+' : '') + a.chg.toFixed(2) + '%</span>' +
+      '<span class="f1"><span class="k">RSI </span>' + (a.rsi == null ? '—' : a.rsi.toFixed(1)) +
+        '<span class="k">' + src + '</span></span>' +
+      '<span class="f2"><span class="k">距 200 日 </span><span class="' + cls(a.dist200) + '">' +
+        (a.dist200 == null ? '—' : pcs(a.dist200)) + '</span><span class="k">' + src + '</span></span>' +
+      '<span class="f3"><span class="k">所在区间 </span><span style="color:' +
+        (a.zone ? zc[a.zone.kind] : 'var(--text-muted)') + '">' + esc(zone) + '</span></span>' +
+      '<span class="asof">收盘 ' + esc(a.date || '—') + ' · 快照 + 接口补尾</span>';
+  }
+  function paintOrdbar() {
+    var grp = shown ? groupOf(shown) : [], sums = [], real = 0, n = 0;
+    grp.forEach(function (s) {
+      var l = ordSort(orders[s]);
+      if (!l.length) return;
+      n += l.length;
+      var p = posOf(l);
+      real += p.real;
+      if (p.qty > 0) sums.push(s + ' 持 ' + p.qty + ' 股 · 均价 ' + p.avg.toFixed(2));
+    });
+    $('ordsum').textContent = (sums.join('　|　') || '未持有') +
+      (Math.abs(real) > 1e-9 ? '　已实现 ' + money(real) : '');
+    $('ordmore').textContent = n ? ($('ordtab').hidden ? '订单 ' + n + ' 笔 ▾' : '收起订单 ▴') : '';
+    $('ordmore').style.display = n ? '' : 'none';
+  }
+  function paintOrdTab() {
+    if ($('ordtab').hidden) return;
+    var grp = shown ? groupOf(shown) : [], rows = [];
+    grp.forEach(function (s) {
+      var run = { qty: 0, cost: 0 };
+      ordSort(orders[s]).forEach(function (o) {
+        var q = +o.qty, pr = +o.price, tail, closed = false;
+        if (o.side === 'sell') {
+          var avg = run.qty > 0 ? run.cost / run.qty : 0, k = Math.min(q, run.qty);
+          var gain = (pr - avg) * k;
+          run.qty -= k; run.cost -= avg * k;
+          if (run.qty < 1e-9) { run.qty = 0; run.cost = 0; }
+          tail = '已了结 ' + (gain >= 0 ? '+' : '') + money(gain);
+          closed = true;
+        } else {
+          run.qty += q; run.cost += q * pr;
+          tail = run.qty > 0 ? (run.cost / run.qty).toFixed(2) : '—';
+        }
+        rows.push({ o: o, s: s, tail: tail, closed: closed, gain: closed });
+      });
+    });
+    rows.reverse();
+    $('ordtab').innerHTML =
+      '<div class="th"><span class="o1"></span><span class="o2">代码</span><span class="o3">日期（美东）</span>' +
+      '<span class="o4">股数</span><span class="o5">价格</span><span class="o6">金额</span>' +
+      '<span class="o7">持仓后均价 / 已了结</span><span class="o8"></span></div>' +
+      (rows.length ? rows.map(function (r) {
+        var o = r.o, amt = (+o.qty) * (+o.price);
+        return '<div class="tr' + (r.closed ? ' closed' : '') + '">' +
+          '<span class="o1 ' + (o.side === 'buy' ? 'up' : 'dn') + '">' + (o.side === 'buy' ? 'B' : 'S') + '</span>' +
+          '<span class="o2">' + esc(o.sym) + '</span><span class="o3">' + esc(o.date) + '</span>' +
+          '<span class="o4">' + (o.side === 'buy' ? '' : '−') + o.qty + '</span>' +
+          '<span class="o5">' + (+o.price).toFixed(2) + '</span>' +
+          '<span class="o6">' + amt.toFixed(2) + '</span>' +
+          '<span class="o7 ' + (r.gain ? 'up' : 'muted') + '">' + esc(r.tail) + '</span>' +
+          '<span class="o8"><button data-od="' + esc(o.id) + '" type="button" title="删除这笔">×</button></span></div>';
+      }).join('') : '<div class="tf">这一组还没有订单。</div>') +
+      '<div class="tf">图上 B / S 圆点与这里一一对应</div>';
+  }
+  function ordDefaults() {
+    var a = shown ? data[shown] : null;
+    $('ordform').innerHTML =
+      '<b>' + esc(shown || '') + '</b>' +
+      '<input class="idate" id="odate" type="date" value="' + nyToday() + '">' +
+      '<input class="iqty" id="oqty" placeholder="股数" spellcheck="false">' +
+      '<input class="ipx" id="oprice" placeholder="价格" spellcheck="false" value="' +
+        (a && a.close ? (+a.close).toFixed(2) : '') + '">' +
+      '<button class="bs buy" id="obuy" type="button">买入</button>' +
+      '<button class="bs sell" id="osell" type="button">卖出</button>' +
+      '<span class="oh" id="ohint">点买入 / 卖出即记录 · 日期按美东 · 价格默认最新收盘</span>';
+    $('obuy').addEventListener('click', function () { ordSave('buy'); });
+    $('osell').addEventListener('click', function () { ordSave('sell'); });
+    ['oqty', 'oprice'].forEach(function (k) {
+      $(k).addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); ordSave('buy'); }
+      });
+    });
+    $('oqty').focus();
+  }
+  function ordSave(side) {
+    if (!shown) return;
+    $('ohint').textContent = '保存中…';
+    fetch('/api/orders', { method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sym: shown, side: side, date: $('odate').value,
+        qty: $('oqty').value, price: $('oprice').value }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) {
+        if (!x.ok) { $('ohint').textContent = x.j.error || '保存失败'; return; }
+        regroup(x.j.orders);
+        $('ohint').textContent = (side === 'buy' ? '已记买入' : '已记卖出');
+        $('oqty').value = '';
+        bgScan(); paintOrdbar(); paintOrdTab(); paintPos(); paintToday();
+        mountChart(shown);
+      })
+      .catch(function () { $('ohint').textContent = '保存失败'; });
+  }
+  $('otog').addEventListener('click', function () {
+    var f = $('ordform');
+    f.hidden = !f.hidden;
+    $('otog').textContent = f.hidden ? '记一笔' : '收起';
+    $('otog').classList.toggle('on', !f.hidden);
+    if (!f.hidden) ordDefaults();
+  });
+  $('ordmore').addEventListener('click', function (e) {
+    e.preventDefault();
+    $('ordtab').hidden = !$('ordtab').hidden;
+    paintOrdTab(); paintOrdbar();
+  });
+
+  /* 图表：高度由组件自己撑开，容器 flex:none —— 上面的订单表和下面的明细表
+     展开时都不会把 K 线压扁，页面自己滚动。 */
+  function mountChart(s) {
+    var host = $('tkhost');
+    if (!window.LyraTicker || !window.LyraTicker.mount || !host) return;
+    $('tkrec').hidden = true;
+    $('tkrec').innerHTML = '';
+    paintRecLead();
+    window.LyraTicker.mount(host, s, function (err) {
+      if (shown !== s) return;
+      // 把组件自带的记录表整块搬到图下面，展开它不再挤压图表
+      var body = err ? null : host.querySelector('.lyra-tkrecbody');
+      if (body) { $('tkrec').innerHTML = ''; $('tkrec').appendChild(body); }
+      paintRecLead();
+      try { window.dispatchEvent(new Event('resize')); } catch (e) {}
+    });
+  }
+  /* 区间与交叉的条数：按正股序列现算一次，和图上画的是同一批 */
+  function hasRec() { return !!$('tkrec').querySelector('.lyra-tkrecbody'); }
+  function paintRecLead() {
+    var lead = $('reclead');
+    lead.hidden = false;
+    var s = shown, base = under(s) || s, LT = window.LyraTicker;
+    var set = function (c) {
+      if (shown !== s) return;
+      lead.innerHTML = '<span class="t">区间与交叉记录</span>' +
+        '<span class="lg"><span class="sw b"></span>建仓 ' + c.b + '</span>' +
+        '<span class="lg"><span class="sw g"></span>超卖 ' + c.g + '</span>' +
+        '<span class="lg"><span class="sw a"></span>强势 ' + c.a + '</span>' +
+        '<span class="muted">|</span><span class="up">● 金叉 ' + c.gx + '</span>' +
+        '<span class="dn">● 死叉 ' + c.dx + '</span>' +
+        '<span class="src">近 3 年' + (under(s) ? ' · 正股口径' : '') + '</span>' +
+        (hasRec() ? '<a class="more" id="recmore">' +
+          ($('tkrec').hidden ? '展开明细表 ▾' : '收起明细表 ▴') + '</a>' : '');
+      if ($('recmore')) {
+        $('recmore').addEventListener('click', function (e) {
+          e.preventDefault();
+          $('tkrec').hidden = !$('tkrec').hidden;
+          paintRecLead();
+        });
+      }
+    };
+    set({ a: '—', g: '—', b: '—', gx: '—', dx: '—' });
+    if (!LT || !LT.analyze || !LT.indicators || !LT.crosses) return;
+    bars(base).then(function (rows) {
+      if (!rows || shown !== s) return;
+      var an = LT.analyze(rows), z = an.zones, ind = LT.indicators, c = an.close_;
+      var all = [].concat(
+        LT.crosses(ind.sma(c, 5), ind.sma(c, 60), '', an.dates),
+        LT.crosses(ind.sma(c, 60), ind.sma(c, 200), '', an.dates));
+      var m = ind.macd(c);
+      all = all.concat(LT.crosses(m.dif, m.dea, '', an.dates));
+      set({ a: z.a.length, g: z.g.length, b: z.b.length,
+        gx: all.filter(function (x) { return x.kind === 'golden'; }).length,
+        dx: all.filter(function (x) { return x.kind === 'death'; }).length });
+    }).catch(function () {});
+  }
+  function detail(s) {
+    if (!window.LyraTicker || !window.LyraTicker.mount) return;
+    shown = s;
+    $('dsym').textContent = s;
+    paintFav(); paintTags(); paintStat(); paintOrdbar(); paintOrdTab();
+    if (!$('ordform').hidden) ordDefaults();
+    paintToday(); paintWatch(); paintPos();
+    try { history.replaceState(null, '', location.pathname + '#s=' + encodeURIComponent(s)); } catch (e) {}
+    mountChart(s);
+  }
+  function repaintAll() {
+    paintToday(); paintWatch(); paintPos(); paintOrdbar(); paintOrdTab();
+    if (shown) { paintStat(); paintTags(); }
+  }
+
+  /* ══ 事件 ══ 一个委托统一处理，顺序要紧：嵌在 [data-s] 里的按钮必须先匹配 ══ */
+  function closePops() {
+    $('tdtagp').hidden = true;
+    $('sortp').hidden = true;
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target, hit = function (sel) { return t.closest && t.closest(sel); };
+
+    var rd = hit('[data-rd]');
+    if (rd) {
+      e.preventDefault(); e.stopPropagation();
+      var g = rd.getAttribute('data-rd');
+      if (reads[g] === todayStr()) delete reads[g]; else reads[g] = todayStr();
+      saveReads(); paintToday();
+      return;
+    }
+    var del = hit('[data-del]');
+    if (del) {
+      e.preventDefault(); e.stopPropagation();
+      var ds = del.getAttribute('data-del');
+      syms = syms.filter(function (x) { return x !== ds; });
+      delete data[ds];
+      save().then(function () {
+        cacheSave(); repaintAll();
+        if (shown === ds) { shown = null; first(); }
+      });
+      return;
+    }
+    var wt = hit('[data-wtag]');
+    if (wt) {
+      e.preventDefault(); e.stopPropagation();
+      var ws = wt.getAttribute('data-wtag'), ts = tagsFor(ws);
+      if (ts.length) { tagPick = {}; ts.forEach(function (x) { tagPick[x] = true; }); paintWatch(); }
+      else { $('tmgr').hidden = false; $('tmgrb').textContent = '收起'; paintTagMgr(); }
+      return;
+    }
+    var od = hit('[data-od]');
+    if (od) {
+      e.preventDefault(); e.stopPropagation();
+      fetch('/api/orders/' + encodeURIComponent(od.getAttribute('data-od')),
+        { method: 'DELETE', credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j.orders) return;
+          regroup(j.orders); bgScan(); paintOrdbar(); paintOrdTab(); paintPos(); paintToday();
+          if (shown) mountChart(shown);
+        });
+      return;
+    }
+    var sy = hit('[data-bgsync]');
+    if (sy) { e.preventDefault(); e.stopPropagation(); bgSync(sy.getAttribute('data-bgsync')); return; }
+    if (t.id === 'bgundo') { e.preventDefault(); e.stopPropagation(); bgUndo(); return; }
+
+    var pr = hit('[data-prow]');
+    if (pr) {
+      e.preventDefault();
+      var ps = pr.getAttribute('data-prow');
+      posOpen[ps] = !posOpen[ps];
+      detail(ps);
+      return;
+    }
+    if (hit('#dflag')) { e.preventDefault(); if (shown) toggleFlag(shown); return; }
+    if (hit('#tdflagb')) { e.preventDefault(); flagOnly = !flagOnly; paintToday(); return; }
+    var pxb = hit('[data-px]');
+    if (pxb) { e.preventDefault(); setPxMode(pxb.getAttribute('data-px')); return; }
+    var rf = hit('[data-rf]');
+    if (rf) {
+      e.preventDefault();
+      readFilter = rf.getAttribute('data-rf');
+      try { localStorage.setItem('lyra.dash.rf', readFilter); } catch (er) {}
+      paintToday();
+      return;
+    }
+    if (hit('#tdtagb')) {
+      e.preventDefault(); e.stopPropagation();
+      var op = $('tdtagp').hidden;
+      closePops(); $('tdtagp').hidden = !op;
+      return;
+    }
+    if (t.id === 'tdtagclr') {
+      e.preventDefault(); e.stopPropagation();
+      todayTags = {}; paintToday(); $('tdtagp').hidden = false;
+      return;
+    }
+    var tdt = hit('[data-tdtag]');
+    if (tdt) {
+      e.preventDefault(); e.stopPropagation();
+      var n = tdt.getAttribute('data-tdtag');
+      todayTags[n] = !todayTags[n];
+      paintToday(); $('tdtagp').hidden = false;
+      return;
+    }
+    var tg = hit('[data-tg]');
+    if (tg) {
+      e.preventDefault();
+      var tn = tg.getAttribute('data-tg');
+      tagPick[tn] = !tagPick[tn];
+      paintWatch();
+      return;
+    }
+    if (hit('#sortb')) {
+      e.preventDefault(); e.stopPropagation();
+      var so = $('sortp').hidden;
+      closePops(); $('sortp').hidden = !so;
+      return;
+    }
+    var sk = hit('[data-sk]');
+    if (sk) {
+      e.preventDefault(); e.stopPropagation();
+      var k = sk.getAttribute('data-sk');
+      if (sortKey === k) sortAsc = !sortAsc;
+      else { sortKey = k; sortAsc = k !== 'chg'; }
+      try {
+        localStorage.setItem('lyra.dash.sk', sortKey);
+        localStorage.setItem('lyra.dash.sd', sortAsc ? '1' : '0');
+      } catch (er) {}
+      paintWatch();
+      return;
+    }
+    var mg = hit('[data-merge]');
+    if (mg) {
+      e.preventDefault(); e.stopPropagation();
+      var from = mg.getAttribute('data-merge');
+      var to = (window.prompt('把「' + from + '」并入哪个标签？', '') || '').trim();
+      if (to && to !== from) editTag(from, to);
+      return;
+    }
+    var dt = hit('[data-dtag]');
+    if (dt) {
+      e.preventDefault(); e.stopPropagation();
+      var dn = dt.getAttribute('data-dtag');
+      if (window.confirm('删除标签「' + dn + '」？带这个标签的标的会变成未打标签。')) editTag(dn, '');
+      return;
+    }
+    if (hit('#tmgrb')) {
+      e.preventDefault(); e.stopPropagation();
+      var m = $('tmgr');
+      m.hidden = !m.hidden;
+      $('tmgrb').textContent = m.hidden ? '管理标签' : '收起';
+      if (!m.hidden) paintTagMgr();
+      return;
+    }
+    if (hit('#editb')) {
+      e.preventDefault();
+      var on = $('watch').classList.toggle('edit');
+      $('editb').textContent = on ? '完成' : '编辑';
+      $('editb').classList.toggle('on', on);
+      return;
+    }
+    // 放最后：卡片、关注行、正股↔杠杆互跳都靠它
+    var a = hit('[data-s]');
+    if (a) { e.preventDefault(); detail(a.getAttribute('data-s')); return; }
+
+    // 弹层内的空白处点了不算「点外面」；真的点到外面才收起
+    if (hit('.pop')) return;
+    closePops();
+  });
+
+  // 标签改名：失焦或回车即写回
+  $('tmgr').addEventListener('change', function (e) {
+    var i = e.target.closest('[data-ren]');
+    if (!i) return;
+    var from = i.getAttribute('data-ren'), to = (i.value || '').trim();
+    if (!to || to === from) { i.value = from; return; }
+    editTag(from, to);
+  });
+  $('tmgr').addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    if (e.target.id === 'newtag') {
+      e.preventDefault();
+      var v = (e.target.value || '').trim();
+      if (!v) return;
+      if (!shown) { $('thint').textContent = '先在右边选一个标的，新标签会打在它上面'; return; }
+      var base = under(shown) || shown, cur = tagsFor(base).slice();
+      if (cur.indexOf(v) < 0) cur.push(v);
+      var one = {}; one[base] = cur;
+      e.target.value = '';
+      putTags(one);
+    } else if (e.target.hasAttribute('data-ren')) {
+      e.preventDefault(); e.target.blur();
+    }
+  });
+
+  function addSym() {
+    var v = ($('add').value || '').trim().toUpperCase();
+    if (!SYMRE.test(v)) { $('thint').textContent = '代码格式不对'; return; }
+    if (syms.indexOf(v) >= 0) { $('thint').textContent = v + ' 已经在关注里'; return; }
+    $('thint').textContent = '正在取 ' + v + ' 的行情…';
+    $('add').value = '';
+    fetchOne(v).then(function () {
+      if (!data[v]) { $('thint').textContent = '取不到 ' + v + ' 的行情'; return; }
+      syms.push(v);
+      if (metaApi() && metaApi().ask) metaApi().ask([v]);
+      return save().then(function () { cacheSave(); $('thint').textContent = ''; repaintAll(); detail(v); });
+    });
+  }
+  $('add').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); addSym(); }
+  });
+  function openSym(v) {
+    v = (v || '').trim().toUpperCase();
+    if (!SYMRE.test(v)) { $('q').focus(); return; }
+    $('q').value = '';
+    if (data[v]) { detail(v); return; }
+    $('dsym').textContent = v;
+    $('dstat').innerHTML = '<span class="load">正在取行情…</span>';
+    fetchOne(v).then(function () {
+      if (data[v]) detail(v);
+      else $('dstat').innerHTML = '<span class="muted">取不到 ' + esc(v) + ' 的行情</span>';
+    });
+  }
+  $('q').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); openSym($('q').value); }
+  });
+  $('fav').addEventListener('click', function () {
+    if (!shown) return;
+    var i = syms.indexOf(shown);
+    if (i >= 0) syms.splice(i, 1); else syms.push(shown);
+    paintFav();
+    save().then(function () { cacheSave(); repaintAll(); });
+  });
+  /* 中文名、标签、财报、分析师数据是服务端异步查的，回来后原地重画，不打断正在看的图 */
+  document.addEventListener('lyra-meta', function () {
+    repaintAll();
+    if (!$('tmgr').hidden) paintTagMgr();
+  });
+
+  function first() {
+    var m = /^#s=([A-Za-z0-9.\-]{1,10})$/.exec(location.hash || '');
+    var want = m ? m[1].toUpperCase() : null;
+    var ok = syms.filter(function (s) { return data[s]; });
+    if (want && ok.indexOf(want) >= 0) { detail(want); return; }
+    if (want && !data[want]) {
+      fetchOne(want).then(function () {
+        if (data[want]) detail(want); else if (ok.length) detail(ok[0]);
+      });
+      return;
+    }
+    if (ok.length) detail(ok[0]);
+    else { $('dsym').textContent = '—'; $('dstat').innerHTML = ''; $('tkhost').innerHTML = ''; }
+  }
+  function fillPosPrices() {
+    var miss = Object.keys(orders).filter(function (s) {
+      return posOf(orders[s]).qty > 0 && !data[s];
+    });
+    if (!miss.length) { paintPos(); return; }
+    serial(miss).then(function () { cacheSave(); paintPos(); });
+  }
+
+  /* ══ 启动 ══ */
+  applyTheme(theme);
+  setTab(tab);
+  fetch('/api/flags', { credentials: 'same-origin' })
+    .then(function (r) { return r.ok ? r.json() : { symbols: [] }; })
+    .then(function (j) { (j.symbols || []).forEach(function (k) { flags[k] = 1; }); })
+    .catch(function () {});
+  fetch('/api/watchlist', { credentials: 'same-origin' })
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      syms = j.symbols || [];
+      if (metaApi() && metaApi().ask) metaApi().ask(syms);
+      if (!syms.length) { repaintAll(); return; }
+      var c = cacheLoad(), miss = syms.slice();
+      if (c) {
+        cacheAt = c.at;
+        miss = syms.filter(function (s) {
+          if (c.data[s] === undefined) return true;
+          data[s] = c.data[s]; return false;
+        });
+      }
+      if (!miss.length) { repaintAll(); stamp(); first(); return; }
+      busy = true; repaintAll();
+      return serial(miss).then(function () {
+        if (!cacheAt) cacheAt = Date.now();
+        cacheSave(); stamp(); first();
+      });
+    })
+    .catch(function () {
+      $('wbody').innerHTML = '<p class="pempty">读取关注列表失败。</p>';
+      $('tdbody').innerHTML = '';
+    })
+    .then(function () {
+      return Promise.all([loadOrd(), loadReads()]).then(function () {
+        bgScan(); repaintAll(); fillPosPrices();
+        /* 探一次 Bitget 行情：403（非管理员）就把开关整个藏起来，
+           不给用户一个点了没反应的按钮。 */
+        return liveFetch().then(function () {
+          paintPxSeg();
+          if (pxMode === 'live') { paintToday(); paintWatch(); liveTick(); }
+        });
+      });
+    });
+})();
+</script>
+</body>
+</html>

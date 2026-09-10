@@ -1,0 +1,79 @@
+/* Shell Protocol themes. Structure is fixed; skin is swapped by setting
+   data-lyra-theme on any container. :root defaults to the home/deep-space skin. */
+:root{
+  --surface-page:var(--space-900); --surface-page-alt:var(--space-850);
+  --surface-raised:var(--space-800); --surface-inset:var(--space-700);
+  --text-heading:#ffffff; --text-body:var(--space-fg); --text-muted:var(--space-fg-dim);
+  --accent:var(--star-blue); --accent-quiet:var(--star-blue-dim); --on-accent:var(--space-950);
+  --link:var(--star-blue); --border-hairline:var(--space-700); --border-strong:var(--space-600);
+  --code-bg:var(--space-950); --code-fg:var(--space-fg); --inline-code-bg:var(--space-700); --inline-code-fg:var(--star-cyan);
+  --toc-line:rgba(230,237,243,.22); --panel-bg:rgba(13,17,23,.82); --overlay:rgba(0,0,0,.6);
+  --font-heading:var(--font-mono-display); --font-body:var(--font-sans); --font-code:var(--font-mono-code);
+  --shadow-card:0 1px 2px rgba(0,0,0,.4); --glow-card:0 0 0 1px var(--accent-quiet), 0 8px 30px rgba(122,162,247,.18);
+}
+[data-lyra-theme="home"]{
+  --surface-page:var(--space-900); --surface-page-alt:var(--space-850);
+  --surface-raised:var(--space-800); --surface-inset:var(--space-700);
+  --text-heading:#ffffff; --text-body:var(--space-fg); --text-muted:var(--space-fg-dim);
+  --accent:var(--star-blue); --accent-quiet:var(--star-blue-dim); --on-accent:var(--space-950);
+  --link:var(--star-blue); --border-hairline:var(--space-700); --border-strong:var(--space-600);
+  --code-bg:var(--space-950); --code-fg:var(--space-fg); --inline-code-bg:var(--space-700); --inline-code-fg:var(--star-cyan);
+  --toc-line:rgba(230,237,243,.22); --panel-bg:rgba(13,17,23,.82);
+  --font-heading:var(--font-mono-display); --font-body:var(--font-sans); --font-code:var(--font-mono-code);
+  --shadow-card:0 1px 2px rgba(0,0,0,.4); --glow-card:0 0 0 1px var(--accent-quiet), 0 8px 30px rgba(122,162,247,.18);
+}
+[data-lyra-theme="tech"]{
+  --surface-page:var(--tokyo-bg); --surface-page-alt:var(--tokyo-bg);
+  --surface-raised:var(--tokyo-surface); --surface-inset:var(--tokyo-inset);
+  --text-heading:var(--tokyo-head); --text-body:var(--tokyo-body); --text-muted:var(--tokyo-dim);
+  --accent:var(--tokyo-blue); --accent-quiet:#3d59a1; --on-accent:var(--tokyo-bg);
+  --link:var(--tokyo-blue); --border-hairline:var(--tokyo-line); --border-strong:#3b4261;
+  --code-bg:var(--tokyo-surface); --code-fg:var(--tokyo-body); --inline-code-bg:var(--tokyo-inset); --inline-code-fg:var(--tokyo-purple);
+  --toc-line:rgba(169,177,214,.24); --panel-bg:rgba(26,27,38,.86);
+  --font-heading:var(--font-mono-display); --font-body:var(--font-sans); --font-code:var(--font-mono-code);
+  --shadow-card:0 1px 2px rgba(0,0,0,.45); --glow-card:0 0 0 1px #3d59a1, 0 8px 30px rgba(122,162,247,.16);
+}
+[data-lyra-theme="data"]{
+  --surface-page:var(--data-bg); --surface-page-alt:var(--data-zebra);
+  --surface-raised:var(--data-card); --surface-inset:var(--data-zebra);
+  --text-heading:var(--data-head); --text-body:var(--data-body); --text-muted:var(--data-dim);
+  --accent:var(--data-blue); --accent-quiet:#bee3f8; --on-accent:#ffffff;
+  --link:var(--data-blue); --border-hairline:var(--data-line); --border-strong:#cbd5e0;
+  --code-bg:#1a202c; --code-fg:#e2e8f0; --inline-code-bg:var(--data-card); --inline-code-fg:#2b6cb0;
+  --toc-line:rgba(45,55,72,.22); --panel-bg:rgba(255,255,255,.86);
+  --font-heading:var(--font-sans-geo); --font-body:var(--font-sans); --font-code:var(--font-mono-alt);
+  --shadow-card:0 1px 3px rgba(16,24,40,.08); --glow-card:0 0 0 1px var(--data-blue), 0 10px 24px rgba(49,130,206,.14);
+}
+[data-lyra-theme="essay"]{
+  --surface-page:var(--ivory-bg); --surface-page-alt:var(--ivory-raised);
+  --surface-raised:var(--ivory-raised); --surface-inset:#f0ebe2;
+  --text-heading:var(--ivory-head); --text-body:var(--ivory-body); --text-muted:var(--ivory-quote);
+  --accent:var(--ivory-amber); --accent-quiet:#d6c3a5; --on-accent:var(--ivory-bg);
+  --link:var(--ivory-amber); --border-hairline:var(--ivory-rule); --border-strong:#d6cec1;
+  --code-bg:#f0ebe2; --code-fg:var(--ivory-body); --inline-code-bg:#f0ebe2; --inline-code-fg:var(--ivory-amber);
+  --toc-line:rgba(61,61,61,.2); --panel-bg:rgba(250,248,245,.88);
+  --font-heading:var(--font-serif-text); --font-body:var(--font-serif-cjk); --font-code:var(--font-mono-alt);
+  --shadow-card:0 1px 2px rgba(60,50,35,.06); --glow-card:0 0 0 1px var(--accent-quiet), 0 8px 24px rgba(146,64,14,.1);
+}
+[data-lyra-theme="tutorial"]{
+  --surface-page:var(--gh-bg); --surface-page-alt:var(--gh-surface);
+  --surface-raised:var(--gh-surface); --surface-inset:#eef1f4;
+  --text-heading:var(--gh-head); --text-body:var(--gh-body); --text-muted:var(--gh-dim);
+  --accent:var(--gh-green); --accent-quiet:#a6e6b8; --on-accent:#ffffff;
+  --link:var(--gh-blue); --border-hairline:var(--gh-line); --border-strong:#afb8c1;
+  --code-bg:var(--gh-surface); --code-fg:var(--gh-body); --inline-code-bg:#eaeef2; --inline-code-fg:#0550ae;
+  --toc-line:rgba(36,41,47,.2); --panel-bg:rgba(255,255,255,.88);
+  --font-heading:var(--font-sans-geo); --font-body:var(--font-sans); --font-code:var(--font-mono-alt);
+  --shadow-card:0 1px 0 rgba(27,31,36,.04); --glow-card:0 0 0 1px var(--gh-green), 0 0 0 4px rgba(26,127,55,.14);
+}
+[data-lyra-theme="magazine"]{
+  --surface-page:var(--mag-bg); --surface-page-alt:var(--mag-raised);
+  --surface-raised:var(--mag-raised); --surface-inset:#111111;
+  --text-heading:var(--mag-head); --text-body:var(--mag-body); --text-muted:var(--mag-dim);
+  --accent:var(--mag-gold); --accent-quiet:#5c4d31; --on-accent:var(--mag-bg);
+  --link:var(--mag-gold); --border-hairline:var(--mag-rule); --border-strong:#3a3a3a;
+  --code-bg:#0f0f0f; --code-fg:var(--mag-body); --inline-code-bg:#161616; --inline-code-fg:var(--mag-gold);
+  --toc-line:rgba(255,255,255,.22); --panel-bg:rgba(0,0,0,.84);
+  --font-heading:var(--font-serif-display); --font-body:var(--font-sans-cjk); --font-code:var(--font-mono-display);
+  --shadow-card:none; --glow-card:0 0 0 1px var(--mag-gold);
+}

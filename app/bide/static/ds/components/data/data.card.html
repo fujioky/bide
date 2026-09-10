@@ -1,0 +1,31 @@
+<!-- @dsCard group="Components" viewport="700x560" name="Data — figures & tables" subtitle="Stat cards, bar rows, comparison table, chart frame" -->
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.js"></script>
+<style>html,body{margin:0}body{background:var(--surface-page);color:var(--text-body);font-family:var(--font-body);padding:18px 20px;}.lbl{font-family:var(--font-mono-display);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}</style><link rel="stylesheet" href="/ds/ds-runtime.css"><script src="/ds/ds-runtime.js" defer></script></head>
+<body data-lyra-theme="data"><div id="root"></div><script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const DS = window.LyraBlogDesignSystem_fbfdef;
+
+const { StatCard, BarChartRow, ComparisonTable, ChartFrame } = DS;
+function Demo(){
+  return <div style={{display:'grid',gap:16,maxWidth:660}}>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
+      <StatCard value="€2,400" label="最高性价比" note="荷兰 · 阿姆斯特丹"/>
+      <StatCard value="€4,200" label="最高绝对值" note="瑞士 · 苏黎世" tone="accent"/>
+      <StatCard value="€2,100" label="最大博士群体" note="德国" tone="down"/>
+    </div>
+    <div>
+      <BarChartRow label="瑞士" value={4200} max={4200} display="€4,200"/>
+      <BarChartRow label="荷兰" value={2400} max={4200} display="€2,400" tone="quiet"/>
+      <BarChartRow label="德国" value={2100} max={4200} display="€2,100" tone="quiet"/>
+      <BarChartRow label="法国" value={1900} max={4200} display="€1,900" tone="quiet"/>
+    </div>
+    <ComparisonTable columns={["国家","月薪","租房","净剩","评分"]} rows={[["瑞士","€4,200","€1,500","€2,700","★★★★"],["荷兰","€2,400","€1,050","€1,350","★★★★"],["德国","€2,100","€850","€1,250","★★★"],["法国","€1,900","€900","€1,000","★★"]]}/>
+    <ChartFrame title="薪资 vs 生活成本" note="数据: 2025" height={140}/>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+</script></body></html>

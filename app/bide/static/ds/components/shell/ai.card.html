@@ -1,0 +1,127 @@
+<!-- @dsCard group="Components" viewport="820x620" name="AI — 文章问答浮窗与面板" subtitle="线上实装：右下角呼吸浮钮、右侧滑入面板、流式气泡、未配置时不渲染" -->
+<!doctype html><html lang="zh"><head><meta charset="utf-8">
+<link rel="stylesheet" href="/ds/shell.css">
+<link rel="stylesheet" href="/ds/tokens/fonts.css">
+<link rel="stylesheet" href="/ds/tokens/base.css">
+<link rel="stylesheet" href="/ds/ds-runtime.css">
+<style>
+body{background:var(--surface-page);color:var(--text-body);font-family:var(--font-body)}
+.wrap{max-width:600px;margin:0 auto;padding:var(--sp-6)}
+.lbl{font-family:var(--font-code);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-muted);margin:var(--sp-6) 0 var(--sp-3);display:block}
+.lbl:first-child{margin-top:0}
+p{margin:0 0 var(--sp-4);font-size:var(--fs-small);line-height:var(--lh-body)}
+.themes{display:flex;gap:6px;flex-wrap:wrap;margin:var(--sp-5) 0 0}
+.themes button{padding:5px 12px;border-radius:var(--radius-pill);cursor:pointer;background:transparent;
+  border:1px solid var(--border-hairline);color:var(--text-muted);font-family:var(--font-code);font-size:11px}
+.themes button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.static-panel{position:relative;inset:auto;width:100%;height:420px;border:1px solid var(--border-hairline);
+  border-radius:var(--radius-4);animation:none;overflow:hidden}
+</style></head>
+<body data-lyra-theme="home" data-lyra-ai-demo>
+<div class="wrap">
+
+<span class="lbl">Launcher · 右下角，3s 呼吸，悬停暂停</span>
+<p>后端未配置时完全不渲染，不留死按钮。后端就绪但访客未登录时，入口仍在，文案变「登录问 AI」，点了跳登录页——不让人对着一个不响应的按钮猜。</p>
+
+<span class="lbl">手机端底部操作簇 · 目录与问 AI 并排</span>
+<div class="lyra-dock-cluster" style="position:relative;right:auto;bottom:auto;display:inline-flex">
+  <button type="button"><span aria-hidden="true">☰</span>目录</button>
+  <button type="button" class="ai"><span class="sp" aria-hidden="true">✦</span>问 AI</button>
+</div>
+<p style="margin-top:var(--sp-3)">≤1024px 时两个独立浮钮合并成这一簇，右下角一处，不再各占一角。</p>
+
+<span class="lbl">划词工具条 · 选中正文后浮出</span>
+<div class="lyra-sel-bar" style="position:relative;display:inline-flex">
+  <button type="button"><span class="g">✎</span>注释</button>
+  <button type="button"><span class="g">✦</span>问 AI</button>
+</div>
+<p style="margin-top:var(--sp-3)">「注释」写给自己，存在本机浏览器，正文里留一道强调色下划线，点回去可改可删。「问 AI」把选中内容暂存进输入框，<b>不立即发送</b>——你补充完问题再发。</p>
+
+<span class="lbl">注释高亮</span>
+<p>卦名从水边来。<mark class="lyra-note" title="示例注释">泽在下，地在上，水气升到土里去</mark>，草就长起来了。</p>
+
+<span class="lbl">两种形态</span>
+<p><b>悬浮</b>——盖在页面上，遮罩点击即关，适合问一句就走。<b>侧栏停靠</b>——像浏览器插件的 side panel：正文整体左移让出空间，页头右端收窄，页尾不被遮，目录轨道跟着移，可以边读边问。头部那个 ⇱ / ⇲ 切换，选择记在本机。停靠时拖左边缘改宽度，300–720px。窄于 1024px 不支持停靠，自动退回底部弹出。</p>
+
+<span class="lbl">Panel · 停靠态（正文已左移，页头页尾都露着）</span>
+<div class="lyra-ai-panel static-panel">
+  <div class="lyra-ai-head">
+    <span class="sp" aria-hidden="true">✦</span>
+    <b>就这篇文章提问</b>
+    <button type="button" class="mode" aria-label="切换停靠" title="改为悬浮">⇱</button>
+    <button type="button" aria-label="关闭">✕</button>
+  </div>
+  <div class="lyra-ai-log">
+    <div class="lyra-ai-msg">
+      <div class="who">AI</div>
+      <div class="bubble">这篇对比了十五个欧洲国家岗位制博士的税后工资、房租与净剩，并按六个维度加权打分。</div>
+    </div>
+    <div class="lyra-ai-msg me">
+      <div class="who">You</div>
+      <div class="bubble">荷兰和德国，把房租算进去差多少？</div>
+    </div>
+    <div class="lyra-ai-msg">
+      <div class="who">AI</div>
+      <div class="bubble">文章里荷兰月薪 €2,400、房租 €1,050，净剩 €1,350；德国 €2,100 / €850，净剩 €1,250。差 €100 左右。</div>
+    </div>
+    <div class="lyra-ai-msg">
+      <div class="who">AI</div>
+      <div class="bubble"><span class="lyra-ai-dots"><span></span><span></span><span></span></span></div>
+    </div>
+  </div>
+  <div class="lyra-ai-quote">
+    <span>荷兰的博士月薪约 €2,400，德国约 €2,100；但把房租算进去，两者的净剩差距会缩小到 €100 上下。</span>
+    <button type="button" aria-label="移除引用">✕</button>
+  </div>
+  <div class="lyra-ai-shots">
+    <div class="lyra-ai-shot" style="background:linear-gradient(135deg,#2b3a55,#1a2333)">
+      <button type="button" aria-label="移除">✕</button>
+    </div>
+    <div class="lyra-ai-shot" style="background:linear-gradient(135deg,#3a2b55,#231a33)">
+      <button type="button" aria-label="移除">✕</button>
+    </div>
+  </div>
+  <form class="lyra-ai-form" onsubmit="return false">
+    <button type="button" class="attach" aria-label="上传图片">＋</button>
+    <textarea rows="1" placeholder="补充你的问题…，可粘贴截图"></textarea>
+    <button type="submit">发送</button>
+  </form>
+</div>
+
+<span class="lbl">图片</span>
+<p>三种进来的方式：点 ＋ 选文件、直接把截图 <b>Ctrl/Cmd+V 粘贴</b>进输入框、或者拖文件到面板上。最多四张，长边超 1600 会先等比压缩再传。服务端把图落到临时目录，用 CLI 的 <code>@路径</code> 语法带进上下文，半小时后自动清理。</p>
+
+<span class="lbl">上下文</span>
+<p>服务端按 slug 读该文章的 HTML，剥掉标签取纯文本（保留标题层级），作为 system prompt 传上去。不在前端拼，密钥不出服务端。</p>
+
+<span class="lbl">交互</span>
+<p>Enter 发送，Shift+Enter 换行，输入框随内容涨到 120px 封顶。回复走 SSE 流式逐字渲染，等待时显示三点。Esc 或点空白关闭。每 IP 每分钟十次限流。</p>
+
+<span class="lbl">换肤</span>
+<div class="themes">
+  <button type="button" data-t="home" aria-pressed="true">home</button>
+  <button type="button" data-t="tech" aria-pressed="false">tech</button>
+  <button type="button" data-t="data" aria-pressed="false">data</button>
+  <button type="button" data-t="essay" aria-pressed="false">essay</button>
+  <button type="button" data-t="tutorial" aria-pressed="false">tutorial</button>
+  <button type="button" data-t="magazine" aria-pressed="false">magazine</button>
+</div>
+
+</div>
+
+<button type="button" class="lyra-ai-fab" aria-label="就这篇文章提问">
+  <span class="sp" aria-hidden="true">✦</span><span class="txt">问 AI</span>
+</button>
+
+<script>
+document.querySelectorAll('.themes button').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.body.dataset.lyraTheme = b.dataset.t;
+    document.querySelectorAll('.themes button').forEach(function (x) {
+      x.setAttribute('aria-pressed', x === b);
+    });
+  });
+});
+</script>
+</body></html>
