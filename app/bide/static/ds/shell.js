@@ -183,55 +183,12 @@ document.addEventListener('click', function (e) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
-/* 文章页显示登录态：静态页面向服务端问一次 */
+/* Shared account navigation from fujioky-auth. */
 (function () {
-  var slot = document.querySelector('[data-lyra-auth]');
-  if (!slot) return;
-  fetch('/auth/whoami', { credentials: 'same-origin' })
-    .then(function (r) { return r.json(); })
-    .then(function (d) {
-      if (d.signedIn) {
-        /* 「股市看板」只在 blog 上出现：其它站点共用这份 shell.js，不给它们加这一项 */
-        if (/^blog\./.test(location.hostname) && !document.querySelector('a[href="/dashboard"]')) {
-          var dash = document.createElement('a');
-          dash.href = '/dashboard';
-          dash.textContent = '股市看板';
-          slot.parentNode.insertBefore(dash, slot);
-        }
-        var av = document.createElement('span');
-        av.className = 'lyra-avatar';
-        av.title = d.name;
-        if (d.avatar) {
-          var im = document.createElement('img');
-          im.src = d.avatar; im.alt = '';
-          im.onerror = function () { av.textContent = (d.name || 'U').slice(0, 1); };
-          av.appendChild(im);
-        } else av.textContent = (d.name || 'U').slice(0, 1);
-        var out = document.createElement('a');
-        out.href = '/auth/logout?next=' + encodeURIComponent(location.pathname);
-        out.textContent = '登出';
-        slot.appendChild(av);
-        var connections = document.createElement('a');
-        connections.href = '/oauth/connections';
-        connections.textContent = '已授权应用';
-        slot.appendChild(connections);
-        var account = document.createElement('a');
-        account.href = '/auth/account';
-        account.textContent = '账号设置';
-        var sessions = document.createElement('a');
-        sessions.href = '/auth/sessions';
-        sessions.textContent = '登录设备';
-        slot.appendChild(account);
-        slot.appendChild(sessions);
-        slot.appendChild(out);
-      } else if (d.authReady) {
-        var a = document.createElement('a');
-        a.href = '/auth/login?next=' + encodeURIComponent(location.pathname);
-        a.textContent = '登录';
-        slot.appendChild(a);
-      }
-    })
-    .catch(function () {});
+  if (!document.querySelector('[data-lyra-auth]')) return;
+  var script = document.createElement('script');
+  script.src = '/auth/ui.js';
+  document.head.appendChild(script);
 })();
 
 /* ── 文章 AI 问答 ────────────────────────────────────────────────

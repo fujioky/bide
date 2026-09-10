@@ -52,6 +52,8 @@ class Settings:
     notify_skip: frozenset = field(default_factory=lambda: frozenset(e.lower() for e in _list("NOTIFY_SKIP")))
     notify_gap_min: int = max(0, int(_env("NOTIFY_GAP_MIN", "30")))
 
+    profile_links: tuple = ({"href": "/oauth/connections", "label": "已授权应用", "description": "管理 AI 客户端的访问授权"},)
+
     # MCP（mcp.bide.example.com）
     mcp_host: str = _env("MCP_HOST", "mcp.bide.example.com")
 
