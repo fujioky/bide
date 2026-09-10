@@ -11,6 +11,14 @@ Python 编写的美股看板与行情、回测服务。
 
 ## 开发
 
+首次克隆需初始化子模块：
+
+```sh
+git clone --recurse-submodules https://github.com/fujioky/bide.git
+```
+
+已有仓库运行 `git submodule update --init --recursive`。子模块固定到已提交的版本。
+
 应用位于 `app/`，行情服务位于 `quant/`，AI 服务位于 `agent/`。
 安装各目录的依赖；BIDE 还需安装 `packages/fujioky-auth`。配置通过环境变量提供。
 

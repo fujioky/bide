@@ -5,6 +5,7 @@ HOST=${DEPLOY_HOST:-deploy-host}
 export RSYNC_RSH="ssh -o ControlMaster=auto -o ControlPath=/tmp/bide-deploy-%C -o ControlPersist=120 -o ServerAliveInterval=15"
 SSH=(ssh -o ControlMaster=auto -o ControlPath=/tmp/bide-deploy-%C -o ControlPersist=120 -o ServerAliveInterval=15)
 BIDE=$(cd "$(dirname "$0")/.." && pwd)
+git -C "$BIDE" submodule update --init --recursive
 NOTE=${NOTE_DIR:-$(dirname "$BIDE")/note}
 EXCL=(--exclude .git --exclude __pycache__ --exclude .pytest_cache --exclude '*.pyc' --exclude node_modules --exclude build --exclude dist --exclude '*.egg-info')
 "${SSH[@]}" "$HOST" 'mkdir -p /opt/bide /opt/note'

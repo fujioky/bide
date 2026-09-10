@@ -1,0 +1,3 @@
+[submodule "packages/fujioky-auth"]
+	path = packages/fujioky-auth
+	url = https://github.com/fujioky/fujioky-auth.git
