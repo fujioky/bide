@@ -22,7 +22,7 @@ from bide.services import zones as Z
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, "fixtures", "bars")
-ZONES_CJS = os.path.abspath(os.path.join(HERE, "..", "..", "blog", "zones.cjs"))
+ZONES_CJS = os.path.abspath(os.path.join(HERE, "fixtures", "zones.cjs"))
 NODE = shutil.which("node") or "/home/fujio/.local/share/mise/installs/node/24/bin/node"
 SYMBOLS = sorted(f[:-5] for f in os.listdir(FIXTURES) if f.endswith(".json"))
 PREFIX_STEP = 25
